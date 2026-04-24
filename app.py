@@ -3,14 +3,18 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import google.generativeai as genai
-
 # --- 1. CONFIGURACIÓN IA ---
-# PEGA TU CLAVE AQUÍ:
-API_KEY = "12345" 
+# Primero intentamos leer de la nube (Streamlit Secrets)
+if "GEMINI_API_KEY" in st.secrets:
+    API_KEY = st.secrets["AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q"]
+else:
+    # Si no existe en la nube, usa tu clave local para pruebas en VS Code
+    API_KEY = "AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q" 
 
-if API_KEY != "12345":
+# Solo configuramos si la clave no es el texto por defecto
+if API_KEY != "TU_API_KEY_LOCAL_AQUÍ" and API_KEY != "":
     genai.configure(api_key=API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash') # Modelo rápido y eficiente
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
 # --- 2. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="MCC - Copec Analytics AI", page_icon="🤖")
@@ -87,7 +91,7 @@ if uploaded_file:
         tasa_reincidencia = (len(conteo[conteo > 1]) / len(conteo) * 100) if not conteo.empty else 0
     else: tasa_reincidencia = 0
 
-    # --- INDICADORES (VELOCÍMETROS) ---
+# --- INDICADORES (VELOCÍMETROS) ---
     st.markdown("### 📊 Salud de Activos")
     g1, g2, g3, g4 = st.columns(4)
     
@@ -98,13 +102,14 @@ if uploaded_file:
     with g2:
         st.plotly_chart(crear_gauge(tasa_precaucion, "Alerta Temprana", "#f59e0b"), use_container_width=True)
         st.caption("Muestras en observación preventiva")
-     with g3:
-        st.plotly_chart(crear_gauge(100-criticidad, "Salud Fluido", "#3b82f6"), use_container_width=True)
-        st.caption("Activos con fluido operativo")    
-
-    with g4:
+        
+    with g3:
         st.plotly_chart(crear_gauge(tasa_reincidencia, "Reincidencia", "#6366f1"), use_container_width=True)
         st.caption("Componentes con fallas repetitivas")
+        
+    with g4:
+        st.plotly_chart(crear_gauge(100-criticidad, "Salud Fluido", "#3b82f6"), use_container_width=True)
+        st.caption("Activos con fluido operativo")
 
     ## --- CONSULTOR IA ---
     st.markdown("---")
