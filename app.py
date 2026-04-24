@@ -72,17 +72,18 @@ def crear_gauge(valor, titulo, color):
 st.title("🚀 MCC - AI Analysis System")
 st.caption("Panel de Confiabilidad • Copec S.A.")
 
-# --- CARGA DE DATOS ---
+# --- CARGA Y PROCESAMIENTO DE DATOS ---
 st.sidebar.header("⚙️ Configuración")
 uploaded_file = st.sidebar.file_uploader("Cargar Base de Datos (CSV)", type="csv")
 
 if uploaded_file:
     try:
-        # Carga inicial
+        # Carga del archivo con detección automática de separador
         df = pd.read_csv(uploaded_file, encoding='latin-1', sep=None, engine='python')
+        # Estandarizar nombres de columnas (Mayúsculas y sin espacios)
         df.columns = [c.upper().strip() for c in df.columns]
         
-        # Procesamiento de Fechas
+        # Procesamiento de Fechas para filtros temporales
         if 'FECHA_MUESTRA' in df.columns:
             df['FECHA_MUESTRA'] = pd.to_datetime(df['FECHA_MUESTRA'], errors='coerce')
             df = df.dropna(subset=['FECHA_MUESTRA'])
@@ -90,19 +91,18 @@ if uploaded_file:
         st.error(f"Error al leer el archivo: {e}")
         st.stop()
 
-    # --- FILTROS LATERALES ---
+    # --- PANEL DE FILTROS LATERALES ---
     st.sidebar.markdown("---")
     st.sidebar.subheader("📍 Filtros de Análisis")
     
-     # FILTROS
+    # 1. Filtro por Faena
     faenas = ["Todas"] + sorted(df['NOMBRE_FAENA'].unique().tolist())
     faena_sel = st.sidebar.selectbox("Seleccionar Faena", faenas)
-    df_filtered = df if faena_sel == "Todas" else df[df['NOMBRE_FAENA'] == faena_sel]
     
-    # Aplicar primer filtro
+    # Filtro inicial por Faena
     df_filtered = df if faena_sel == "Todas" else df[df['NOMBRE_FAENA'] == faena_sel]
 
-    # 2. Filtro de Fechas
+    # 2. Filtro por Rango de Fechas
     if 'FECHA_MUESTRA' in df.columns:
         min_date = df['FECHA_MUESTRA'].min().date()
         max_date = df['FECHA_MUESTRA'].max().date()
@@ -116,13 +116,13 @@ if uploaded_file:
             max_value=max_date
         )
         
-        # Aplicar segundo filtro si el rango está completo
+        # Validación y aplicación del filtro de fecha
         if isinstance(date_range, tuple) and len(date_range) == 2:
             start_date, end_date = date_range
-            df_filtered = df_filtered
-            (df_filtered['FECHA_MUESTRA'].dt.date >= start_date) & 
-            (df_filtered['FECHA_MUESTRA'].dt.date <= end_date)
-
+            df_filtered = df_filtered[
+                (df_filtered['FECHA_MUESTRA'].dt.date >= start_date) & 
+                (df_filtered['FECHA_MUESTRA'].dt.date <= end_date)
+            ]
     # --- CÁLCULOS DINÁMICOS ---
     total_m = len(df_filtered)
     alertas_n = len(df_filtered[df_filtered['ESTADO'] == 'ALERTA'])
