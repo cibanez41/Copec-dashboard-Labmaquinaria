@@ -9,9 +9,9 @@ from datetime import datetime
 if "GEMINI_API_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 else:
-    API_KEY = "TU_API_KEY_LOCAL" 
+    API_KEY = "AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q" 
 
-if API_KEY != "TU_API_KEY_LOCAL" and API_KEY != "":
+if API_KEY != "AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q" and API_KEY != "":
     try:
         genai.configure(api_key=API_KEY)
         # Usamos el modelo más estable para reportes rápidos
