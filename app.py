@@ -120,8 +120,8 @@ if uploaded_file:
         if isinstance(date_range, tuple) and len(date_range) == 2:
             start_date, end_date = date_range
             df_filtered = df_filtered
-                (df_filtered['FECHA_MUESTRA'].dt.date >= start_date) & 
-                (df_filtered['FECHA_MUESTRA'].dt.date <= end_date)
+            (df_filtered['FECHA_MUESTRA'].dt.date >= start_date) & 
+            (df_filtered['FECHA_MUESTRA'].dt.date <= end_date)
 
     # --- CÁLCULOS DINÁMICOS ---
     total_m = len(df_filtered)
