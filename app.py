@@ -244,5 +244,4 @@ st.data_editor(
     use_container_width=True
 )
 
-else:
-    st.info("👋 Sube tu archivo CSV para activar el sistema.")
+
