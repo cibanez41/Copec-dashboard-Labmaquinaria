@@ -16,14 +16,14 @@ if API_KEY:
     try:
         genai.configure(api_key=API_KEY)
         # Cambiamos 'gemini-1.5-flash' por 'gemini-pro' o el nombre técnico completo
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
     except Exception as e:
         st.error(f"Error al configurar IA: {e}")
         
 # Solo configuramos si la clave no es el texto por defecto
 if API_KEY != "TU_API_KEY_LOCAL_AQUÍ" and API_KEY != "":
     genai.configure(api_key=API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 # --- 2. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="MCC - Copec Analytics AI", page_icon="🤖")
