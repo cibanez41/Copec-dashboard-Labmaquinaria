@@ -13,14 +13,13 @@ else:
 
 # Configuración final
 if API_KEY:
-    genai.configure(api_key=API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-
-# Configuración final
-if API_KEY:
-    genai.configure(api_key=API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-
+    try:
+        genai.configure(api_key=API_KEY)
+        # Cambiamos 'gemini-1.5-flash' por 'gemini-pro' o el nombre técnico completo
+        model = genai.GenerativeModel('gemini-1.5-flash-latest') 
+    except Exception as e:
+        st.error(f"Error al configurar IA: {e}")
+        
 # Solo configuramos si la clave no es el texto por defecto
 if API_KEY != "TU_API_KEY_LOCAL_AQUÍ" and API_KEY != "":
     genai.configure(api_key=API_KEY)
