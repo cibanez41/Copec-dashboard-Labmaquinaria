@@ -3,60 +3,53 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import google.generativeai as genai
-# --- 1. CONFIGURACIÓN IA ---
-# Buscamos la etiqueta 'GEMINI_API_KEY' en los secretos de la nube
+from datetime import datetime
+
+# --- 1. CONFIGURACIÓN IA (Opcional) ---
 if "GEMINI_API_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 else:
-    # Si estás en tu PC local, puedes poner tu clave aquí para probar
-    API_KEY = "AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q" 
+    API_KEY = "TU_API_KEY_LOCAL" 
 
-# Configuración final
-if API_KEY:
+if API_KEY != "TU_API_KEY_LOCAL" and API_KEY != "":
     try:
         genai.configure(api_key=API_KEY)
-        # Cambiamos 'gemini-1.5-flash' por 'gemini-pro' o el nombre técnico completo
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
-    except Exception as e:
-        st.error(f"Error al configurar IA: {e}")
-        
-# Solo configuramos si la clave no es el texto por defecto
-if API_KEY != "TU_API_KEY_LOCAL_AQUÍ" and API_KEY != "":
-    genai.configure(api_key=API_KEY)
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+        # Usamos el modelo más estable para reportes rápidos
+        model = genai.GenerativeModel('gemini-1.5-flash')
+    except:
+        pass
 
 # --- 2. CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(layout="wide", page_title="MCC - Copec Analytics AI", page_icon="🤖")
+st.set_page_config(layout="wide", page_title="MCC - Copec Analytics", page_icon="🚜")
 
-# Estilos CSS
+# Estilos CSS personalizados para una apariencia premium
 st.markdown("""
     <style>
-    .main { background-color: #f1f5f9; }
+    .main { background-color: #f8fafc; }
     div[data-testid="stMetric"] {
         background-color: white;
         padding: 20px;
         border-radius: 20px;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        border: 1px solid #e2e8f0;        
+        border: 1px solid #e2e8f0;
     }
-    /* Estilo para que el caption se vea centrado y pequeño como en el diseño */
     .stCaption {
         text-align: center;
         font-style: italic;
         color: #94a3b8;
-        margin-top: -20px;
-        padding-bottom: 20px;
-    }     
+        margin-top: -15px;
+        padding-bottom: 10px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# Función para crear Velocímetros
+# Función para generar los velocímetros (Gauges)
 def crear_gauge(valor, titulo, color):
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
         value = valor,
-        title = {'text': titulo, 'font': {'size': 18, 'color': '#64748b', 'weight': 'bold'}},
-        number = {'suffix': "%", 'font': {'size': 24, 'color': '#1e293b'}},
+        title = {'text': titulo, 'font': {'size': 16, 'color': '#64748b', 'weight': 'bold'}},
+        number = {'suffix': "%", 'font': {'size': 20, 'color': '#1e293b'}},
         gauge = {
             'axis': {'range': [0, 100], 'tickwidth': 1},
             'bar': {'color': color},
@@ -65,12 +58,12 @@ def crear_gauge(valor, titulo, color):
             'bordercolor': "#e2e8f0",
         }
     ))
-    fig.update_layout(height=250, margin=dict(l=20, r=20, t=50, b=20))
+    fig.update_layout(height=220, margin=dict(l=10, r=10, t=40, b=10))
     return fig
 
-# --- HEADER ---
+# --- HEADER DEL DASHBOARD ---
 st.title("🚀 MCC - AI Analysis System")
-st.caption("Panel de Confiabilidad • Copec S.A.")
+st.caption("Panel de Confiabilidad y Gestión de Mantenimiento • Copec S.A.")
 
 # --- CARGA Y PROCESAMIENTO DE DATOS ---
 st.sidebar.header("⚙️ Configuración")
@@ -123,158 +116,125 @@ if uploaded_file:
                 (df_filtered['FECHA_MUESTRA'].dt.date >= start_date) & 
                 (df_filtered['FECHA_MUESTRA'].dt.date <= end_date)
             ]
-    # --- CÁLCULOS DINÁMICOS ---
-    total_m = len(df_filtered)
-    alertas_n = len(df_filtered[df_filtered['ESTADO'] == 'ALERTA'])
-    precaucion_n = len(df_filtered[df_filtered['ESTADO'] == 'PRECAUCION'])
-    criticidad = (alertas_n / total_m * 100) if total_m > 0 else 0
-    tasa_precaucion = (precaucion_n / total_m * 100) if total_m > 0 else 0
-    
-    # Reincidencia Real
-    if 'COMPONENTE' in df_filtered.columns:
-        conteo = df_filtered['COMPONENTE'].value_counts()
-        tasa_reincidencia = (len(conteo[conteo > 1]) / len(conteo) * 100) if not conteo.empty else 0
-    else: tasa_reincidencia = 0
 
-# --- INDICADORES (VELOCÍMETROS) ---
-    st.markdown("### 📊 Salud de Activos")
+    # --- CÁLCULOS DINÁMICOS DE KPIs ---
+    total_m = len(df_filtered)
+    if total_m > 0:
+        alertas_n = len(df_filtered[df_filtered['ESTADO'] == 'ALERTA'])
+        precaucion_n = len(df_filtered[df_filtered['ESTADO'] == 'PRECAUCION'])
+        
+        criticidad = (alertas_n / total_m * 100)
+        tasa_precaucion = (precaucion_n / total_m * 100)
+
+        if 'COMPONENTE' in df_filtered.columns:
+            conteo = df_filtered['COMPONENTE'].value_counts()
+            tasa_reincidencia = (len(conteo[conteo > 1]) / len(conteo) * 100) if not conteo.empty else 0
+        else: 
+            tasa_reincidencia = 0
+    else:
+        criticidad = tasa_precaucion = tasa_reincidencia = 0
+
+    # --- VISUALIZACIÓN: INDICADORES PRINCIPALES ---
+    st.markdown(f"### 📊 Dashboard: {faena_sel}")
+    if total_m > 0:
+        st.write(f"Mostrando datos desde **{df_filtered['FECHA_MUESTRA'].min().strftime('%d/%m/%Y')}** hasta **{df_filtered['FECHA_MUESTRA'].max().strftime('%d/%m/%Y')}**")
+    
     g1, g2, g3, g4 = st.columns(4)
     
     with g1:
-        st.plotly_chart(crear_gauge(criticidad, "Criticidad Flota", "#ef4444" if criticidad > 20 else "#10b981"), use_container_width=True)
-        st.caption("Impacto de muestras en Alerta sobre el Total")
+        st.plotly_chart(crear_gauge(criticidad, "Criticidad", "#ef4444" if criticidad > 20 else "#10b981"), use_container_width=True)
+        st.caption("Muestras en ALERTA / Total")
         
     with g2:
         st.plotly_chart(crear_gauge(tasa_precaucion, "Alerta Temprana", "#f59e0b"), use_container_width=True)
-        st.caption("Muestras en observación preventiva")
+        st.caption("Muestras en PRECAUCIÓN")
         
     with g3:
         st.plotly_chart(crear_gauge(tasa_reincidencia, "Reincidencia", "#6366f1"), use_container_width=True)
-        st.caption("Componentes con fallas repetitivas")
+        st.caption("Fallas repetitivas por componente")
         
     with g4:
         st.plotly_chart(crear_gauge(100-criticidad, "Salud Fluido", "#3b82f6"), use_container_width=True)
-        st.caption("Activos con fluido operativo")
+        st.caption("Activos con lubricante operativo")
 
-    ## --- CONSULTOR IA ---
+    # --- ANÁLISIS DE CONTAMINACIÓN ---
     st.markdown("---")
-    st.header("🤖 Consultor Experto IA")
-    
-    if API_KEY == "TU_API_KEY_AQUÍ":
-        st.warning("⚠️ Falta configurar la API KEY en el código para activar la IA.")
-    else:
-        if st.button("✨ Generar Reporte Técnico"):
-            with st.spinner('Analizando datos de laboratorio...'):
-                try:
-                    # Resumen para la IA
-                    hierro_avg = df_filtered['HIERRO'].mean() if 'HIERRO' in df_filtered.columns else 0
-                    prompt = f"""
-                    Actúa como Ingeniero Senior de Lubricación. Analiza estos datos:
-                    Faena: {faena_sel}
-                    Criticidad: {criticidad:.1f}%
-                    Reincidencia: {tasa_reincidencia:.1f}%
-                    Hierro Promedio: {hierro_avg:.1f} ppm.
-                    Genera un reporte técnico de 3 puntos clave y una recomendación de acción inmediata.
-                    """
-                    # IMPORTANTE: Aquí usamos 'model'
-                    response = model.generate_content(prompt)
-                    st.info("### 📝 Reporte Técnico Sugerido")
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"Error de IA: {e}")
+    st.subheader("⚠️ Análisis de Contaminación Externo")
+    c1, c2 = st.columns([2, 1])
 
-    # --- GRÁFICOS (ORDENADOS VERTICALMENTE) ---
+    with c1:
+        if 'SILICIO' in df_filtered.columns and 'SODIO' in df_filtered.columns:
+            fig_cont = px.scatter(
+                df_filtered, x='SILICIO', y='SODIO', color='ESTADO',
+                size='HIERRO' if 'HIERRO' in df_filtered.columns else None,
+                hover_name='EQUIPO', title="Relación Silicio vs Sodio (Contaminación)",
+                color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'}
+            )
+            st.plotly_chart(fig_cont, use_container_width=True)
+        else:
+            st.warning("Faltan datos de Silicio/Sodio para este período.")
+
+    with c2:
+        st.write("**Top Equipos Críticos (Período Seleccionado)**")
+        if 'SILICIO' in df_filtered.columns:
+            top_cont = df_filtered.nlargest(5, 'SILICIO')[['EQUIPO', 'SILICIO', 'ESTADO']]
+            st.dataframe(top_cont, hide_index=True, use_container_width=True)
+
+    # --- DESGASTE METÁLICO (HEATMAP) ---
     st.markdown("---")
-    
-    # Salud por Faena (Cambia orientación si se filtra)
-    st.subheader("📍 Salud por Faena")
-    f_data = df.groupby(['NOMBRE_FAENA', 'ESTADO']).size().unstack(fill_value=0).reset_index()
-    for col in ['ALERTA', 'PRECAUCION', 'NORMAL']:
-        if col not in f_data: f_data[col] = 0
+    st.subheader("🔍 Mapa de Desgaste por Metales (PPM)")
+    metales = ['HIERRO', 'COBRE', 'PLOMO', 'ALUMINIO', 'CROMO']
+    metales_presentes = [m for m in metales if m in df_filtered.columns]
 
-    if faena_sel == "Todas":
-        fig_f = px.bar(f_data, y='NOMBRE_FAENA', x=['ALERTA', 'PRECAUCION', 'NORMAL'], orientation='h', color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'}, text_auto=True)
-    else:
-        f_data_f = f_data[f_data['NOMBRE_FAENA'] == faena_sel]
-        fig_f = px.bar(f_data_f, x='NOMBRE_FAENA', y=['ALERTA', 'PRECAUCION', 'NORMAL'], orientation='v', color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'}, text_auto=True)
-    
-    st.plotly_chart(fig_f, use_container_width=True)
-
-    # Salud por Equipo
-    st.subheader("🚜 Salud por Equipo")
-    if 'EQUIPO' in df_filtered.columns:
-        e_data = df_filtered.groupby(['EQUIPO', 'ESTADO']).size().unstack(fill_value=0).reset_index()
-        for col in ['ALERTA', 'PRECAUCION', 'NORMAL']:
-            if col not in e_data: e_data[col] = 0
-        fig_e = px.bar(e_data, y='EQUIPO', x=['ALERTA', 'PRECAUCION', 'NORMAL'], orientation='h', color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'}, text_auto=True)
-        st.plotly_chart(fig_e, use_container_width=True)
-        
-else:
-    st.info("👋 Sube tu archivo CSV para activar el sistema.")
-
-# --- SECCIÓN: CONTAMINACIÓN ---
-st.markdown("---")
-st.subheader("⚠️ Análisis de Contaminantes")
-col1, col2 = st.columns(2)
-
-with col1:
-    # Gráfico de Dispersión: Silicio (Tierra) vs Sodio (Refrigerante)
-    if 'SILICIO' in df_filtered.columns and 'SODIO' in df_filtered.columns:
-        fig_cont = px.scatter(
-            df_filtered, 
-            x='SILICIO', y='SODIO', 
-            color='ESTADO',
-            size='HIERRO', # El tamaño indica cuánto desgaste está causando esa contaminación
-            hover_name='EQUIPO',
-            title="Relación Silicio (Tierra) vs Sodio (Agua/Refrigerante)",
-            color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'}
+    if metales_presentes:
+        df_metales = df_filtered.groupby('EQUIPO')[metales_presentes].mean().head(15)
+        fig_heat = px.imshow(
+            df_metales, text_auto=True, aspect="auto",
+            title="Concentración de Metales (Promedio)",
+            color_continuous_scale="Reds"
         )
-        st.plotly_chart(fig_cont, use_container_width=True)
-        st.caption("El tamaño de la burbuja indica el nivel de Hierro (Desgaste).")
-
-with col2:
-    # Tabla de Equipos Críticos (Top 5 con más contaminantes)
-    st.write("**Top 5 Equipos con Mayor Contaminación (PPM)**")
-    if 'SILICIO' in df_filtered.columns:
-        top_cont = df_filtered.nlargest(5, 'SILICIO')[['EQUIPO', 'SILICIO', 'SODIO', 'ESTADO']]
-        st.table(top_cont)
-        # --- SECCIÓN: SALUD DEL LUBRICANTE Y DESGASTE ---
-st.markdown("---")
-st.subheader("🔍 Salud del Fluido y Desgaste Metálico")
-
-# Crear un Heatmap de metales de desgaste
-metales = ['HIERRO', 'COBRE', 'PLOMO', 'ALUMINIO', 'CROMO']
-metales_presentes = [m for m in metales if m in df_filtered.columns]
-
-if metales_presentes:
-    df_metales = df_filtered.groupby('EQUIPO')[metales_presentes].mean().sort_values(by='HIERRO', ascending=False).head(10)
-    fig_heat = px.imshow(
-        df_metales, 
-        text_auto=True, 
-        aspect="auto",
-        title="Concentración Promedio de Metales por Equipo (PPM)",
-        color_continuous_scale="Reds"
-    )
-    st.plotly_chart(fig_heat, use_container_width=True)
-    st.caption("Este mapa permite identificar rápidamente qué metal predomina (ej: Cobre = Bujes/Bronces, Hierro = Engranajes/Camisas).")
+        st.plotly_chart(fig_heat, use_container_width=True)
+    
+    # --- MATRIZ DE DECISIONES DE MANTENIMIENTO ---
     st.markdown("---")
-st.subheader("📋 Matriz de Decisiones de Mantenimiento")
-st.write("Filtra y ordena los resultados de laboratorio para priorizar intervenciones.")
+    st.subheader("📋 Matriz de Decisiones de Mantenimiento")
+    cols_mant = ['EQUIPO', 'COMPONENTE', 'ESTADO', 'HIERRO', 'SILICIO', 'VISCOSIDAD', 'FECHA_MUESTRA']
+    cols_final = [c for c in cols_mant if c in df_filtered.columns]
+    
+    df_editor = df_filtered[cols_final].copy()
+    if 'FECHA_MUESTRA' in df_editor.columns:
+        df_editor['FECHA_MUESTRA'] = df_editor['FECHA_MUESTRA'].dt.strftime('%Y-%m-%d')
 
-# Seleccionamos las columnas más relevantes para mantenimiento
-columnas_mant = ['EQUIPO', 'COMPONENTE', 'ESTADO', 'HIERRO', 'SILICIO', 'VISCOSIDAD', 'FECHA_MUESTRA']
-columnas_existentes = [c for c in columnas_mant if c in df_filtered.columns]
+    st.data_editor(
+        df_editor.sort_values(by='HIERRO', ascending=False) if 'HIERRO' in df_editor.columns else df_editor,
+        column_config={
+            "ESTADO": st.column_config.SelectboxColumn("Prioridad", options=["ALERTA", "PRECAUCION", "NORMAL"]),
+            "HIERRO": st.column_config.NumberColumn("Fe (ppm)", format="%d ⚠️"),
+            "FECHA_MUESTRA": st.column_config.DateColumn("Fecha Lab")
+        },
+        use_container_width=True,
+        hide_index=True
+    )
 
-st.data_editor(
-    df_filtered[columnas_existentes],
-    column_config={
-        "ESTADO": st.column_config.SelectboxColumn(
-            "Prioridad",
-            options=["NORMAL", "PRECAUCION", "ALERTA"],
-            required=True,
-        ),
-        "HIERRO": st.column_config.NumberColumn("Fe (ppm)", format="%d ⭐"),
-    },
-    hide_index=True,
-    use_container_width=True
-)
+    # --- DISTRIBUCIÓN POR EQUIPO ---
+    st.markdown("---")
+    if 'EQUIPO' in df_filtered.columns:
+        st.subheader("🚜 Estado por Equipo en el Período")
+        e_data = df_filtered.groupby(['EQUIPO', 'ESTADO']).size().unstack(fill_value=0).reset_index()
+        # Asegurar que las columnas existan antes de graficar
+        for col in ['ALERTA', 'PRECAUCION', 'NORMAL']:
+            if col not in e_data.columns:
+                e_data[col] = 0
+        fig_e = px.bar(e_data, y='EQUIPO', x=['ALERTA', 'PRECAUCION', 'NORMAL'], 
+                       orientation='h', color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'})
+        st.plotly_chart(fig_e, use_container_width=True)
+
+else:
+    # Mensaje de bienvenida inicial
+    st.info("👋 Por favor, carga tu archivo CSV de laboratorio para activar el dashboard.")
+    st.markdown("""
+        ### Funcionalidades Disponibles:
+        * **Filtro de Faenas y Fechas:** Analice períodos específicos de operación.
+        * **Heatmap de Metales:** Identifique qué metal está desgastando sus activos.
+        * **Matriz de Decisiones:** Priorice intervenciones técnicas de inmediato.
+    """)
