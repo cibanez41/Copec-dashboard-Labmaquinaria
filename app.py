@@ -178,3 +178,69 @@ if uploaded_file:
 else:
     st.info("👋 Sube tu archivo CSV para activar el sistema.")
 
+# --- SECCIÓN: CONTAMINACIÓN ---
+st.markdown("---")
+st.subheader("⚠️ Análisis de Contaminantes")
+col1, col2 = st.columns(2)
+
+with col1:
+    # Gráfico de Dispersión: Silicio (Tierra) vs Sodio (Refrigerante)
+    if 'SILICIO' in df_filtered.columns and 'SODIO' in df_filtered.columns:
+        fig_cont = px.scatter(
+            df_filtered, 
+            x='SILICIO', y='SODIO', 
+            color='ESTADO',
+            size='HIERRO', # El tamaño indica cuánto desgaste está causando esa contaminación
+            hover_name='EQUIPO',
+            title="Relación Silicio (Tierra) vs Sodio (Agua/Refrigerante)",
+            color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'}
+        )
+        st.plotly_chart(fig_cont, use_container_width=True)
+        st.caption("El tamaño de la burbuja indica el nivel de Hierro (Desgaste).")
+
+with col2:
+    # Tabla de Equipos Críticos (Top 5 con más contaminantes)
+    st.write("**Top 5 Equipos con Mayor Contaminación (PPM)**")
+    if 'SILICIO' in df_filtered.columns:
+        top_cont = df_filtered.nlargest(5, 'SILICIO')[['EQUIPO', 'SILICIO', 'SODIO', 'ESTADO']]
+        st.table(top_cont)
+        # --- SECCIÓN: SALUD DEL LUBRICANTE Y DESGASTE ---
+st.markdown("---")
+st.subheader("🔍 Salud del Fluido y Desgaste Metálico")
+
+# Crear un Heatmap de metales de desgaste
+metales = ['HIERRO', 'COBRE', 'PLOMO', 'ALUMINIO', 'CROMO']
+metales_presentes = [m for m in metales if m in df_filtered.columns]
+
+if metales_presentes:
+    df_metales = df_filtered.groupby('EQUIPO')[metales_presentes].mean().sort_values(by='HIERRO', ascending=False).head(10)
+    fig_heat = px.imshow(
+        df_metales, 
+        text_auto=True, 
+        aspect="auto",
+        title="Concentración Promedio de Metales por Equipo (PPM)",
+        color_continuous_scale="Reds"
+    )
+    st.plotly_chart(fig_heat, use_container_width=True)
+    st.caption("Este mapa permite identificar rápidamente qué metal predomina (ej: Cobre = Bujes/Bronces, Hierro = Engranajes/Camisas).")
+    st.markdown("---")
+st.subheader("📋 Matriz de Decisiones de Mantenimiento")
+st.write("Filtra y ordena los resultados de laboratorio para priorizar intervenciones.")
+
+# Seleccionamos las columnas más relevantes para mantenimiento
+columnas_mant = ['EQUIPO', 'COMPONENTE', 'ESTADO', 'HIERRO', 'SILICIO', 'VISCOSIDAD', 'FECHA_MUESTRA']
+columnas_existentes = [c for c in columnas_mant if c in df_filtered.columns]
+
+st.data_editor(
+    df_filtered[columnas_existentes],
+    column_config={
+        "ESTADO": st.column_config.SelectboxColumn(
+            "Prioridad",
+            options=["NORMAL", "PRECAUCION", "ALERTA"],
+            required=True,
+        ),
+        "HIERRO": st.column_config.NumberColumn("Fe (ppm)", format="%d ⭐"),
+    },
+    hide_index=True,
+    use_container_width=True
+)
