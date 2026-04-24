@@ -93,8 +93,10 @@ if uploaded_file:
     # --- CÁLCULOS DINÁMICOS ---
     total_m = len(df_filtered)
     alertas_n = len(df_filtered[df_filtered['ESTADO'] == 'ALERTA'])
+    precaucion_n = len(df_filtered[df_filtered['ESTADO'] == 'PRECAUCION'])
     criticidad = (alertas_n / total_m * 100) if total_m > 0 else 0
-
+    tasa_precaucion = (precaucion_n / total_m * 100) if total_m > 0 else 0
+    
     # Reincidencia Real
     if 'COMPONENTE' in df_filtered.columns:
         conteo = df_filtered['COMPONENTE'].value_counts()
