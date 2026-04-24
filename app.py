@@ -216,7 +216,27 @@ if uploaded_file:
             use_container_width=True,
             hide_index=True
         )
+    # --- 5. DISTRIBUCIÓN POR FAENA ---
+    st.markdown("---")
+    st.subheader("📍 Salud por Faena")
+    # Agrupamos por todas las faenas para el comparativo global
+    f_data_all = df.groupby(['NOMBRE_FAENA', 'ESTADO']).size().unstack(fill_value=0).reset_index()
+    for col in ['ALERTA', 'PRECAUCION', 'NORMAL']:
+        if col not in f_data_all.columns: f_data_all[col] = 0
 
+    if faena_sel == "Todas":
+        fig_f = px.bar(f_data_all, y='NOMBRE_FAENA', x=['ALERTA', 'PRECAUCION', 'NORMAL'], 
+                       orientation='h', title="Distribución Global de Salud",
+                       color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'},
+                       text_auto=True)
+    else:
+        f_data_f = f_data_all[f_data_all['NOMBRE_FAENA'] == faena_sel]
+        fig_f = px.bar(f_data_f, x='NOMBRE_FAENA', y=['ALERTA', 'PRECAUCION', 'NORMAL'], 
+                       orientation='v', title=f"Detalle de Salud: {faena_sel}",
+                       color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'},
+                       text_auto=True)
+    st.plotly_chart(fig_f, use_container_width=True)
+    
     # --- DISTRIBUCIÓN POR EQUIPO ---
     if 'EQUIPO' in df_filtered.columns and not df_filtered.empty and 'ESTADO' in df_filtered.columns:
         st.markdown("---")
