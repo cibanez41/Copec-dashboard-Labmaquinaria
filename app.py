@@ -96,9 +96,9 @@ if uploaded_file:
     df_filtered = df if faena_sel == "Todas" else df[df['NOMBRE_FAENA'] == faena_sel]
 
     # 2. Filtro por Rango de Fechas
-    if 'FECHA_MUESTRA' in df.columns:
-        min_date = df['FECHA_MUESTRA'].min().date()
-        max_date = df['FECHA_MUESTRA'].max().date()
+    if 'FECHA_MUESTREO' in df.columns:
+        min_date = df['FECHA_MUESTREO'].min().date()
+        max_date = df['FECHA_MUESTREO'].max().date()
         
         st.sidebar.markdown("---")
         st.sidebar.subheader("📅 Período de Tiempo")
@@ -113,8 +113,8 @@ if uploaded_file:
         if isinstance(date_range, tuple) and len(date_range) == 2:
             start_date, end_date = date_range
             df_filtered = df_filtered[
-                (df_filtered['FECHA_MUESTRA'].dt.date >= start_date) & 
-                (df_filtered['FECHA_MUESTRA'].dt.date <= end_date)
+                (df_filtered['FECHA_MUESTREO'].dt.date >= start_date) & 
+                (df_filtered['FECHA_MUESTREO'].dt.date <= end_date)
             ]
 
     # --- CÁLCULOS DINÁMICOS DE KPIs ---
@@ -202,15 +202,15 @@ if uploaded_file:
     cols_final = [c for c in cols_mant if c in df_filtered.columns]
     
     df_editor = df_filtered[cols_final].copy()
-    if 'FECHA_MUESTRA' in df_editor.columns:
-        df_editor['FECHA_MUESTRA'] = df_editor['FECHA_MUESTRA'].dt.strftime('%Y-%m-%d')
+    if 'FECHA_MUESTREO' in df_editor.columns:
+        df_editor['FECHA_MUESTREO'] = df_editor['FECHA_MUESTREO'].dt.strftime('%Y-%m-%d')
 
     st.data_editor(
         df_editor.sort_values(by='HIERRO', ascending=False) if 'HIERRO' in df_editor.columns else df_editor,
         column_config={
             "ESTADO": st.column_config.SelectboxColumn("Prioridad", options=["ALERTA", "PRECAUCION", "NORMAL"]),
             "HIERRO": st.column_config.NumberColumn("Fe (ppm)", format="%d ⚠️"),
-            "FECHA_MUESTRA": st.column_config.DateColumn("Fecha Lab")
+            "FECHA_MUESTREO": st.column_config.DateColumn("Fecha Lab")
         },
         use_container_width=True,
         hide_index=True
