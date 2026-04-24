@@ -78,16 +78,50 @@ uploaded_file = st.sidebar.file_uploader("Cargar Base de Datos (CSV)", type="csv
 
 if uploaded_file:
     try:
+        # Carga inicial
         df = pd.read_csv(uploaded_file, encoding='latin-1', sep=None, engine='python')
         df.columns = [c.upper().strip() for c in df.columns]
+        
+        # Procesamiento de Fechas
+        if 'FECHA_MUESTRA' in df.columns:
+            df['FECHA_MUESTRA'] = pd.to_datetime(df['FECHA_MUESTRA'], errors='coerce')
+            df = df.dropna(subset=['FECHA_MUESTRA'])
     except Exception as e:
-        st.error(f"Error al leer: {e}")
+        st.error(f"Error al leer el archivo: {e}")
         st.stop()
 
-    # FILTROS
+    # --- FILTROS LATERALES ---
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📍 Filtros de Análisis")
+    
+     # FILTROS
     faenas = ["Todas"] + sorted(df['NOMBRE_FAENA'].unique().tolist())
     faena_sel = st.sidebar.selectbox("Seleccionar Faena", faenas)
     df_filtered = df if faena_sel == "Todas" else df[df['NOMBRE_FAENA'] == faena_sel]
+    
+    # Aplicar primer filtro
+    df_filtered = df if faena_sel == "Todas" else df[df['NOMBRE_FAENA'] == faena_sel]
+
+    # 2. Filtro de Fechas
+    if 'FECHA_MUESTRA' in df.columns:
+        min_date = df['FECHA_MUESTRA'].min().date()
+        max_date = df['FECHA_MUESTRA'].max().date()
+        
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("📅 Período de Tiempo")
+        date_range = st.sidebar.date_input(
+            "Seleccionar Rango",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date
+        )
+        
+        # Aplicar segundo filtro si el rango está completo
+        if isinstance(date_range, tuple) and len(date_range) == 2:
+            start_date, end_date = date_range
+            df_filtered = df_filtered[
+                (df_filtered['FECHA_MUESTRA'].dt.date >= start_date) & 
+                (df_filtered['FECHA_MUESTRA'].dt.date <= end_date)
 
     # --- CÁLCULOS DINÁMICOS ---
     total_m = len(df_filtered)
