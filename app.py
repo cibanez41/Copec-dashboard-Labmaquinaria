@@ -174,6 +174,9 @@ if uploaded_file:
             if col not in e_data: e_data[col] = 0
         fig_e = px.bar(e_data, y='EQUIPO', x=['ALERTA', 'PRECAUCION', 'NORMAL'], orientation='h', color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'}, text_auto=True)
         st.plotly_chart(fig_e, use_container_width=True)
+    else:
+    st.info("👋 Sube tu archivo CSV para activar el sistema.")
+
 # --- SECCIÓN: CONTAMINACIÓN ---
 st.markdown("---")
 st.subheader("⚠️ Análisis de Contaminantes")
