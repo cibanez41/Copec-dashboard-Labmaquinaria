@@ -4,12 +4,22 @@ import plotly.graph_objects as go
 import plotly.express as px
 import google.generativeai as genai
 # --- 1. CONFIGURACIÓN IA ---
-# Primero intentamos leer de la nube (Streamlit Secrets)
+# Buscamos la etiqueta 'GEMINI_API_KEY' en los secretos de la nube
 if "GEMINI_API_KEY" in st.secrets:
-    API_KEY = st.secrets["AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q"]
+    API_KEY = st.secrets["GEMINI_API_KEY"]
 else:
-    # Si no existe en la nube, usa tu clave local para pruebas en VS Code
+    # Si estás en tu PC local, puedes poner tu clave aquí para probar
     API_KEY = "AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q" 
+
+# Configuración final
+if API_KEY:
+    genai.configure(api_key=API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+
+# Configuración final
+if API_KEY:
+    genai.configure(api_key=API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-flash')
 
 # Solo configuramos si la clave no es el texto por defecto
 if API_KEY != "TU_API_KEY_LOCAL_AQUÍ" and API_KEY != "":
