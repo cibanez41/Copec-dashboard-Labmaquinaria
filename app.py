@@ -119,7 +119,7 @@ if uploaded_file:
         # Aplicar segundo filtro si el rango está completo
         if isinstance(date_range, tuple) and len(date_range) == 2:
             start_date, end_date = date_range
-            df_filtered = df_filtered[
+            df_filtered = df_filtered
                 (df_filtered['FECHA_MUESTRA'].dt.date >= start_date) & 
                 (df_filtered['FECHA_MUESTRA'].dt.date <= end_date)
 
