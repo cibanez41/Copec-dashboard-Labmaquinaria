@@ -267,29 +267,6 @@ if uploaded_file:
             use_container_width=True,
             hide_index=True
         )
-
-    # --- DISTRIBUCIÓN POR EQUIPO ---
-    if 'EQUIPO' in df_filtered.columns and not df_filtered.empty and 'ESTADO' in df_filtered.columns:
-        st.markdown("---")
-        st.subheader("🚜 Estado por Equipo")
-        e_data = df_filtered.groupby(['EQUIPO', 'ESTADO']).size().unstack(fill_value=0).reset_index()
-        for col in ['ALERTA', 'PRECAUCION', 'NORMAL']:
-            if col not in e_data.columns: e_data[col] = 0
-        fig_e = px.bar(e_data, y='EQUIPO', x=['ALERTA', 'PRECAUCION', 'NORMAL'], 
-                       orientation='h', color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'})
-        st.plotly_chart(fig_e, use_container_width=True)
-
-else:
-    st.info("👋 Por favor, carga tu archivo CSV de laboratorio para activar el dashboard.")
-    st.markdown("""
-        ### Funcionalidades Disponibles:
-        * **Filtro de Faenas y Fechas:** Analice períodos específicos de operación.
-        * **Heatmap de Metales:** Identifique qué metal está desgastando sus activos.
-        * **Matriz de Decisiones:** Priorice intervenciones técnicas de inmediato.
-    """)
-
-
-
 # --- 7. ANÁLISIS DE LUBRICANTES Y COMPONENTES CRÍTICOS ---
     st.markdown("---")
     st.subheader("🔍 Análisis de Causa Raíz: Lubricantes y Componentes")
@@ -336,5 +313,23 @@ else:
         else:
             st.warning("La columna 'COMPONENTE' no se encuentra en el archivo.")
 
+    
+    # --- DISTRIBUCIÓN POR EQUIPO ---
+    if 'EQUIPO' in df_filtered.columns and not df_filtered.empty and 'ESTADO' in df_filtered.columns:
+        st.markdown("---")
+        st.subheader("🚜 Estado por Equipo")
+        e_data = df_filtered.groupby(['EQUIPO', 'ESTADO']).size().unstack(fill_value=0).reset_index()
+        for col in ['ALERTA', 'PRECAUCION', 'NORMAL']:
+            if col not in e_data.columns: e_data[col] = 0
+        fig_e = px.bar(e_data, y='EQUIPO', x=['ALERTA', 'PRECAUCION', 'NORMAL'], 
+                       orientation='h', color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'})
+        st.plotly_chart(fig_e, use_container_width=True)
 
-
+else:
+    st.info("👋 Por favor, carga tu archivo CSV de laboratorio para activar el dashboard.")
+    st.markdown("""
+        ### Funcionalidades Disponibles:
+        * **Filtro de Faenas y Fechas:** Analice períodos específicos de operación.
+        * **Heatmap de Metales:** Identifique qué metal está desgastando sus activos.
+        * **Matriz de Decisiones:** Priorice intervenciones técnicas de inmediato.
+    """)
