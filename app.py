@@ -19,7 +19,7 @@ if API_KEY != "AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q" and API_KEY != "":
         pass
 
 # --- 2. CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(layout="wide", page_title="MCC - Copec Analytics", page_icon="🚜")
+st.set_page_config(layout="wide", page_title="Panel-Service Engineer Analytics", page_icon="🚜")
 
 st.markdown("""
     <style>
@@ -59,8 +59,8 @@ def crear_gauge(valor, titulo, color):
     return fig
 
 # --- HEADER ---
-st.title("🚀 MCC - AI Analysis System")
-st.caption("Panel de Confiabilidad y Gestión de Mantenimiento • Copec S.A.")
+st.title("🚀 Panel - AI Service Engineer Analysis System")
+st.caption("Panel de Confiabilidad y Gestión de Mantenimiento IS ZONA SUR • CSI/Copec S.A.")
 
 # --- CARGA Y PROCESAMIENTO ---
 st.sidebar.header("⚙️ Configuración")
@@ -102,7 +102,7 @@ if uploaded_file:
         max_date = df_filtered['FECHA_MUESTRA'].max().date()
         
         st.sidebar.markdown("---")
-        st.sidebar.subheader("📅 Período de Tiempo")
+        st.sidebar.subheader("📅 Rango de Fechas")
         date_range = st.sidebar.date_input(
             "Seleccionar Rango",
             value=(min_date, max_date),
@@ -134,7 +134,7 @@ if uploaded_file:
     else:
         criticidad = tasa_precaucion = tasa_reincidencia = 0
 
-    # --- VISUALIZACIÓN ---
+# --- VISUALIZACIÓN: INDICADORES PRINCIPALES ---
     st.markdown(f"### 📊 Dashboard: {faena_sel}")
     
     if tiene_fecha and not df_filtered.empty:
@@ -143,17 +143,32 @@ if uploaded_file:
         st.write(f"Mostrando datos desde **{f_min}** hasta **{f_max}**")
     
     g1, g2, g3, g4 = st.columns(4)
+    
     with g1:
         st.plotly_chart(crear_gauge(criticidad, "Criticidad", "#ef4444" if criticidad > 20 else "#10b981"), use_container_width=True)
+        # Mostramos cuántas alertas de un total de muestras
+        st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{alertas_n}</b> muestras de <b>{total_m}</b> en ALERTA</div>", unsafe_allow_html=True)
         st.caption("Muestras en ALERTA / Total")
+        
     with g2:
         st.plotly_chart(crear_gauge(tasa_precaucion, "Alerta Temprana", "#f59e0b"), use_container_width=True)
+        # Mostramos cuántas precauciones de un total de muestras
+        st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{precaucion_n}</b> muestras de <b>{total_m}</b> en PRECAUCIÓN</div>", unsafe_allow_html=True)
         st.caption("Muestras en PRECAUCIÓN")
+        
     with g3:
         st.plotly_chart(crear_gauge(tasa_reincidencia, "Reincidencia", "#6366f1"), use_container_width=True)
+        # Calculamos cuántos componentes reincidentes (usando la lógica del conteo de arriba)
+        num_reincidentes = len(df_filtered['COMPONENTE'].value_counts()[df_filtered['COMPONENTE'].value_counts() > 1]) if 'COMPONENTE' in df_filtered.columns else 0
+        total_comp = len(df_filtered['COMPONENTE'].unique()) if 'COMPONENTE' in df_filtered.columns else 0
+        st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{num_reincidentes}</b> de <b>{total_comp}</b> componentes con fallas</div>", unsafe_allow_html=True)
         st.caption("Fallas repetitivas por componente")
+        
     with g4:
         st.plotly_chart(crear_gauge(100-criticidad, "Salud Fluido", "#3b82f6"), use_container_width=True)
+        # Salud del fluido es el resto de las muestras (total - alertas)
+        salud_n = total_m - alertas_n
+        st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{salud_n}</b> muestras con fluido OPERATIVO</div>", unsafe_allow_html=True)
         st.caption("Activos con lubricante operativo")
         
     # --- 5. DISTRIBUCIÓN POR FAENA ---
