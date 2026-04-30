@@ -146,30 +146,28 @@ if uploaded_file:
     
     with g1:
         st.plotly_chart(crear_gauge(criticidad, "Criticidad", "#ef4444" if criticidad > 20 else "#10b981"), use_container_width=True)
-        # Mostramos cuántas alertas de un total de muestras
         st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{alertas_n}</b> muestras de <b>{total_m}</b> en ALERTA</div>", unsafe_allow_html=True)
         st.caption("Muestras en ALERTA / Total")
         
     with g2:
         st.plotly_chart(crear_gauge(tasa_precaucion, "Alerta Temprana", "#f59e0b"), use_container_width=True)
-        # Mostramos cuántas precauciones de un total de muestras
         st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{precaucion_n}</b> muestras de <b>{total_m}</b> en PRECAUCIÓN</div>", unsafe_allow_html=True)
         st.caption("Muestras en PRECAUCIÓN")
-        
+
     with g3:
+        # AHORA AQUÍ: Salud del Fluido
+        st.plotly_chart(crear_gauge(100-criticidad, "Salud Fluido", "#10b981"), use_container_width=True)
+        salud_n = total_m - alertas_n
+        st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{salud_n}</b> muestras con fluido OPERATIVO</div>", unsafe_allow_html=True)
+        st.caption("Activos con lubricante operativo")
+        
+    with g4:
+        # AHORA AQUÍ: Reincidencia
         st.plotly_chart(crear_gauge(tasa_reincidencia, "Reincidencia", "#6366f1"), use_container_width=True)
-        # Calculamos cuántos componentes reincidentes (usando la lógica del conteo de arriba)
         num_reincidentes = len(df_filtered['COMPONENTE'].value_counts()[df_filtered['COMPONENTE'].value_counts() > 1]) if 'COMPONENTE' in df_filtered.columns else 0
         total_comp = len(df_filtered['COMPONENTE'].unique()) if 'COMPONENTE' in df_filtered.columns else 0
         st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{num_reincidentes}</b> de <b>{total_comp}</b> componentes con fallas</div>", unsafe_allow_html=True)
         st.caption("Fallas repetitivas por componente")
-        
-    with g4:
-        st.plotly_chart(crear_gauge(100-criticidad, "Salud Fluido", "#10b981"), use_container_width=True)
-        # Salud del fluido es el resto de las muestras (total - alertas)
-        salud_n = total_m - alertas_n
-        st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{salud_n}</b> muestras con fluido OPERATIVO</div>", unsafe_allow_html=True)
-        st.caption("Activos con lubricante operativo")
         
 # --- 5. DISTRIBUCIÓN POR FAENA ---
     st.markdown("---")
@@ -289,3 +287,54 @@ else:
         * **Heatmap de Metales:** Identifique qué metal está desgastando sus activos.
         * **Matriz de Decisiones:** Priorice intervenciones técnicas de inmediato.
     """)
+
+
+
+# --- 7. ANÁLISIS DE LUBRICANTES Y COMPONENTES CRÍTICOS ---
+    st.markdown("---")
+    st.subheader("🔍 Análisis de Causa Raíz: Lubricantes y Componentes")
+    
+    col_lub, col_comp = st.columns(2)
+    
+    # Filtrar solo lo que no es NORMAL para el análisis de fallas
+    df_fallas = df_filtered[df_filtered['ESTADO'].isin(['ALERTA', 'PRECAUCION'])]
+
+    with col_lub:
+        if 'LUBRICANTE' in df_fallas.columns:
+            # Contar fallas por lubricante y estado
+            lub_data = df_fallas.groupby(['LUBRICANTE', 'ESTADO']).size().reset_index(name='CONTEO')
+            # Ordenar para que el que tiene más fallas salga arriba
+            lub_data = lub_data.sort_values(by='CONTEO', ascending=True)
+            
+            fig_lub = px.bar(lub_data, 
+                             y='LUBRICANTE', 
+                             x='CONTEO', 
+                             color='ESTADO',
+                             orientation='h',
+                             title="Alertas por Tipo de Lubricante",
+                             color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b'},
+                             text_auto=True)
+            st.plotly_chart(fig_lub, use_container_width=True)
+        else:
+            st.warning("La columna 'LUBRICANTE' no se encuentra en el archivo.")
+
+    with col_comp:
+        if 'COMPONENTE' in df_fallas.columns:
+            # Contar fallas por componente y estado
+            comp_data = df_fallas.groupby(['COMPONENTE', 'ESTADO']).size().reset_index(name='CONTEO')
+            comp_data = comp_data.sort_values(by='CONTEO', ascending=True)
+            
+            fig_comp = px.bar(comp_data, 
+                              y='COMPONENTE', 
+                              x='CONTEO', 
+                              color='ESTADO',
+                              orientation='h',
+                              title="Alertas por Componente",
+                              color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b'},
+                              text_auto=True)
+            st.plotly_chart(fig_comp, use_container_width=True)
+        else:
+            st.warning("La columna 'COMPONENTE' no se encuentra en el archivo.")
+
+
+
