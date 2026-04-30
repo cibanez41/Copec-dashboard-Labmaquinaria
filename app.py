@@ -165,7 +165,7 @@ if uploaded_file:
         st.caption("Fallas repetitivas por componente")
         
     with g4:
-        st.plotly_chart(crear_gauge(100-criticidad, "Salud Fluido", "#3b82f6"), use_container_width=True)
+        st.plotly_chart(crear_gauge(100-criticidad, "Salud Fluido", "#10b981"), use_container_width=True)
         # Salud del fluido es el resto de las muestras (total - alertas)
         salud_n = total_m - alertas_n
         st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{salud_n}</b> muestras con fluido OPERATIVO</div>", unsafe_allow_html=True)
