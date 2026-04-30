@@ -171,25 +171,42 @@ if uploaded_file:
         st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{salud_n}</b> muestras con fluido OPERATIVO</div>", unsafe_allow_html=True)
         st.caption("Activos con lubricante operativo")
         
-    # --- 5. DISTRIBUCIÓN POR FAENA ---
+# --- 5. DISTRIBUCIÓN POR FAENA ---
     st.markdown("---")
     st.subheader("📍 Salud por Faena")
-    # Agrupamos por todas las faenas para el comparativo global
+    
+    # 1. Agrupamos y aseguramos que existan las 3 columnas de estado
     f_data_all = df.groupby(['NOMBRE_FAENA', 'ESTADO']).size().unstack(fill_value=0).reset_index()
     for col in ['ALERTA', 'PRECAUCION', 'NORMAL']:
         if col not in f_data_all.columns: f_data_all[col] = 0
 
     if faena_sel == "Todas":
+        # Ordenar de mayor a menor según el total de muestras
+        f_data_all['TOTAL'] = f_data_all['ALERTA'] + f_data_all['PRECAUCION'] + f_data_all['NORMAL']
+        f_data_all = f_data_all.sort_values(by='TOTAL', ascending=True) # Ascending True para que en el gráfico H la mayor quede arriba
+        
         fig_f = px.bar(f_data_all, y='NOMBRE_FAENA', x=['ALERTA', 'PRECAUCION', 'NORMAL'], 
-                       orientation='h', title="Distribución Global de Salud",
+                       orientation='h', 
+                       title="Distribución Global (Ordenado por volumen de muestras)",
                        color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'},
                        text_auto=True)
+        fig_f.update_layout(xaxis_title="Cantidad de Muestras", yaxis_title="Faena", legend_title="Estado")
+
     else:
+        # Filtrar la faena específica
         f_data_f = f_data_all[f_data_all['NOMBRE_FAENA'] == faena_sel]
-        fig_f = px.bar(f_data_f, x='NOMBRE_FAENA', y=['ALERTA', 'PRECAUCION', 'NORMAL'], 
-                       orientation='v', title=f"Detalle de Salud: {faena_sel}",
+        
+        # Transformamos los datos para tener 3 barras verticales claras (Melt)
+        f_melted = f_data_f.melt(id_vars=['NOMBRE_FAENA'], value_vars=['ALERTA', 'PRECAUCION', 'NORMAL'], 
+                                 var_name='ESTADO_MUESTRA', value_name='CONTEO')
+        
+        fig_f = px.bar(f_melted, x='ESTADO_MUESTRA', y='CONTEO', 
+                       color='ESTADO_MUESTRA',
+                       title=f"Detalle de Salud: {faena_sel}",
                        color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'},
                        text_auto=True)
+        fig_f.update_layout(xaxis_title="Estado de la Muestra", yaxis_title="Cantidad de Muestras", showlegend=False)
+
     st.plotly_chart(fig_f, use_container_width=True)
     
     # --- CONTAMINACIÓN ---
