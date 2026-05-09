@@ -5,13 +5,14 @@ import plotly.express as px
 import google.generativeai as genai
 from datetime import datetime
 
-# --- 1. CONFIGURACIÓN IA (Opcional) ---
+# --- 1. CONFIGURACIÓN IA ---
 if "GEMINI_API_KEY" in st.secrets:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 else:
-    API_KEY = "AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q" 
+    # Se deja vacío para que el entorno lo maneje o lo ingreses manualmente
+    API_KEY = "" 
 
-if API_KEY != "AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q" and API_KEY != "":
+if API_KEY:
     try:
         genai.configure(api_key=API_KEY)
         model = genai.GenerativeModel('gemini-1.5-flash')
@@ -21,26 +22,44 @@ if API_KEY != "AIzaSyDjUtH9G-G__9QR6GNIk3acZn1_xStWm7Q" and API_KEY != "":
 # --- 2. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="Panel-Service Engineer Analytics", page_icon="🚜")
 
-st.markdown("""
+# URLs de los logos (Se pueden cambiar por rutas locales en el repo)
+LOGO_COPEC_MOBIL = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Logo_Copec.svg/512px-Logo_Copec.svg.png"
+LOGO_CSI = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_CSI_logo.svg/1024px-Google_CSI_logo.svg.png" # Placeholder representativo
+
+# --- 3. ESTILOS CSS PERSONALIZADOS ---
+st.markdown(f"""
     <style>
-    .main { background-color: #f8fafc; }
-    div[data-testid="stMetric"] {
+    .main {{ background-color: #f8fafc; }}
+    
+    /* Estilo para las tarjetas de métricas */
+    div[data-testid="stMetric"] {{
         background-color: white;
         padding: 20px;
         border-radius: 20px;
         box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         border: 1px solid #e2e8f0;
-    }
-    .stCaption {
+    }}
+
+    /* Estilo del Header con logos en extremos */
+    .header-logos {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0px;
+        margin-bottom: 20px;
+    }}
+
+    .stCaption {{
         text-align: center;
         font-style: italic;
         color: #94a3b8;
         margin-top: -15px;
         padding-bottom: 10px;
-    }
+    }}
     </style>
     """, unsafe_allow_html=True)
 
+# Función para Velocímetros
 def crear_gauge(valor, titulo, color):
     fig = go.Figure(go.Indicator(
         mode = "gauge+number",
@@ -58,8 +77,15 @@ def crear_gauge(valor, titulo, color):
     fig.update_layout(height=220, margin=dict(l=10, r=10, t=40, b=10))
     return fig
 
-# --- HEADER ---
-st.title("🚀 Panel - AI Service Engineer Analysis System")
+# --- HEADER CON LOGOS ---
+st.markdown(f"""
+    <div class="header-logos">
+        <img src="{LOGO_COPEC_MOBIL}" width="150">
+        <img src="{LOGO_CSI}" width="100">
+    </div>
+    """, unsafe_allow_html=True)
+
+st.title("Panel - AI Service Engineer Analysis System")
 st.caption("Panel de Confiabilidad y Gestión de Mantenimiento IS ZONA SUR • CSI/Copec S.A.")
 
 # --- CARGA Y PROCESAMIENTO ---
@@ -71,12 +97,10 @@ if uploaded_file:
         df = pd.read_csv(uploaded_file, encoding='latin-1', sep=None, engine='python')
         df.columns = [c.upper().strip() for c in df.columns]
         
-        # --- ESTANDARIZACIÓN DE COLUMNAS (Sustitutos) ---
-        # Si existe FECHA_MUESTREO pero no FECHA_MUESTRA, la renombramos para que el resto del código funcione
+        # Estandarización de columna de fecha
         if 'FECHA_MUESTREO' in df.columns and 'FECHA_MUESTRA' not in df.columns:
             df = df.rename(columns={'FECHA_MUESTREO': 'FECHA_MUESTRA'})
 
-        # Procesamiento Seguro de Fechas
         tiene_fecha = 'FECHA_MUESTRA' in df.columns
         if tiene_fecha:
             df['FECHA_MUESTRA'] = pd.to_datetime(df['FECHA_MUESTRA'], errors='coerce')
@@ -85,7 +109,7 @@ if uploaded_file:
         st.error(f"Error al leer el archivo: {e}")
         st.stop()
 
-    # --- FILTROS ---
+    # --- FILTROS LATERALES ---
     st.sidebar.markdown("---")
     st.sidebar.subheader("📍 Filtros de Análisis")
     
@@ -96,7 +120,6 @@ if uploaded_file:
     if faena_sel != "Todas":
         df_filtered = df_filtered[df_filtered['NOMBRE_FAENA'] == faena_sel]
 
-    # Filtro de Fechas (Solo si la columna existe)
     if tiene_fecha and not df_filtered.empty:
         min_date = df_filtered['FECHA_MUESTRA'].min().date()
         max_date = df_filtered['FECHA_MUESTRA'].max().date()
@@ -117,7 +140,7 @@ if uploaded_file:
                 (df_filtered['FECHA_MUESTRA'].dt.date <= end_date)
             ]
 
-    # --- CÁLCULOS ---
+    # --- CÁLCULOS KPIs ---
     total_m = len(df_filtered)
     if total_m > 0:
         alertas_n = len(df_filtered[df_filtered['ESTADO'] == 'ALERTA']) if 'ESTADO' in df_filtered.columns else 0
@@ -134,7 +157,7 @@ if uploaded_file:
     else:
         criticidad = tasa_precaucion = tasa_reincidencia = 0
 
-# --- VISUALIZACIÓN: INDICADORES PRINCIPALES ---
+    # --- VISUALIZACIÓN KPIs ---
     st.markdown(f"### 📊 Dashboard: {faena_sel}")
     
     if tiene_fecha and not df_filtered.empty:
@@ -155,33 +178,29 @@ if uploaded_file:
         st.caption("Muestras en PRECAUCIÓN")
 
     with g3:
-        # AHORA AQUÍ: Salud del Fluido
         st.plotly_chart(crear_gauge(100-criticidad, "Salud Fluido", "#10b981"), use_container_width=True)
         salud_n = total_m - alertas_n
         st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{salud_n}</b> muestras con fluido OPERATIVO</div>", unsafe_allow_html=True)
         st.caption("Activos con lubricante operativo")
         
     with g4:
-        # AHORA AQUÍ: Reincidencia
         st.plotly_chart(crear_gauge(tasa_reincidencia, "Reincidencia", "#6366f1"), use_container_width=True)
         num_reincidentes = len(df_filtered['COMPONENTE'].value_counts()[df_filtered['COMPONENTE'].value_counts() > 1]) if 'COMPONENTE' in df_filtered.columns else 0
         total_comp = len(df_filtered['COMPONENTE'].unique()) if 'COMPONENTE' in df_filtered.columns else 0
         st.markdown(f"<div style='text-align: center; color: #64748b; font-size: 0.8rem;'><b>{num_reincidentes}</b> de <b>{total_comp}</b> componentes con fallas</div>", unsafe_allow_html=True)
         st.caption("Fallas repetitivas por componente")
-        
-# --- 5. DISTRIBUCIÓN POR FAENA ---
+
+    # --- 5. DISTRIBUCIÓN POR FAENA ---
     st.markdown("---")
     st.subheader("📍 Salud por Faena")
     
-    # 1. Agrupamos y aseguramos que existan las 3 columnas de estado
     f_data_all = df.groupby(['NOMBRE_FAENA', 'ESTADO']).size().unstack(fill_value=0).reset_index()
     for col in ['ALERTA', 'PRECAUCION', 'NORMAL']:
         if col not in f_data_all.columns: f_data_all[col] = 0
 
     if faena_sel == "Todas":
-        # Ordenar de mayor a menor según el total de muestras
         f_data_all['TOTAL'] = f_data_all['ALERTA'] + f_data_all['PRECAUCION'] + f_data_all['NORMAL']
-        f_data_all = f_data_all.sort_values(by='TOTAL', ascending=True) # Ascending True para que en el gráfico H la mayor quede arriba
+        f_data_all = f_data_all.sort_values(by='TOTAL', ascending=True)
         
         fig_f = px.bar(f_data_all, y='NOMBRE_FAENA', x=['ALERTA', 'PRECAUCION', 'NORMAL'], 
                        orientation='h', 
@@ -189,12 +208,8 @@ if uploaded_file:
                        color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'},
                        text_auto=True)
         fig_f.update_layout(xaxis_title="Cantidad de Muestras", yaxis_title="Faena", legend_title="Estado")
-
     else:
-        # Filtrar la faena específica
         f_data_f = f_data_all[f_data_all['NOMBRE_FAENA'] == faena_sel]
-        
-        # Transformamos los datos para tener 3 barras verticales claras (Melt)
         f_melted = f_data_f.melt(id_vars=['NOMBRE_FAENA'], value_vars=['ALERTA', 'PRECAUCION', 'NORMAL'], 
                                  var_name='ESTADO_MUESTRA', value_name='CONTEO')
         
@@ -203,7 +218,7 @@ if uploaded_file:
                        title=f"Detalle de Salud: {faena_sel}",
                        color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'},
                        text_auto=True)
-        fig_f.update_layout(xaxis_title="Estado de la Muestra", yaxis_title="Cantidad de Muestras", showlegend=False)
+        fig_f.update_layout(xaxis_title="Estado", yaxis_title="Muestras", showlegend=False)
 
     st.plotly_chart(fig_f, use_container_width=True)
     
@@ -218,7 +233,7 @@ if uploaded_file:
                 df_filtered, x='SILICIO', y='SODIO', color='ESTADO' if 'ESTADO' in df_filtered.columns else None,
                 size='HIERRO' if 'HIERRO' in df_filtered.columns else None,
                 hover_name='EQUIPO' if 'EQUIPO' in df_filtered.columns else None,
-                title="Relación Silicio vs Sodio",
+                title="Relación Silicio vs Sodio (Burbuja: Nivel Hierro)",
                 color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'}
             )
             st.plotly_chart(fig_cont, use_container_width=True)
@@ -226,7 +241,7 @@ if uploaded_file:
             st.warning("Faltan datos de Silicio/Sodio.")
 
     with c2:
-        st.write("**Top Equipos Críticos (Silicio)**")
+        st.write("**Top Equipos Críticos (Contaminación)**")
         if 'SILICIO' in df_filtered.columns and not df_filtered.empty:
             top_cont = df_filtered.nlargest(5, 'SILICIO')[['EQUIPO', 'SILICIO', 'ESTADO']] if 'EQUIPO' in df_filtered.columns else df_filtered.nlargest(5, 'SILICIO')
             st.dataframe(top_cont, hide_index=True, use_container_width=True)
@@ -241,7 +256,7 @@ if uploaded_file:
         df_metales = df_filtered.groupby('EQUIPO')[metales_presentes].mean().head(15)
         fig_heat = px.imshow(
             df_metales, text_auto=True, aspect="auto",
-            title="Concentración de Metales (Promedio)",
+            title="Promedio de Metales por Equipo",
             color_continuous_scale="Reds"
         )
         st.plotly_chart(fig_heat, use_container_width=True)
@@ -267,54 +282,35 @@ if uploaded_file:
             use_container_width=True,
             hide_index=True
         )
-# --- 7. ANÁLISIS DE LUBRICANTES Y COMPONENTES CRÍTICOS ---
+
+    # --- 7. ANÁLISIS DE CAUSA RAÍZ ---
     st.markdown("---")
     st.subheader("🔍 Análisis de Causa Raíz: Lubricantes y Componentes")
     
     col_lub, col_comp = st.columns(2)
-    
-    # Filtrar solo lo que no es NORMAL para el análisis de fallas
     df_fallas = df_filtered[df_filtered['ESTADO'].isin(['ALERTA', 'PRECAUCION'])]
 
     with col_lub:
         if 'LUBRICANTE' in df_fallas.columns:
-            # Contar fallas por lubricante y estado
             lub_data = df_fallas.groupby(['LUBRICANTE', 'ESTADO']).size().reset_index(name='CONTEO')
-            # Ordenar para que el que tiene más fallas salga arriba
             lub_data = lub_data.sort_values(by='CONTEO', ascending=True)
-            
-            fig_lub = px.bar(lub_data, 
-                             y='LUBRICANTE', 
-                             x='CONTEO', 
-                             color='ESTADO',
-                             orientation='h',
-                             title="Alertas por Tipo de Lubricante",
+            fig_lub = px.bar(lub_data, y='LUBRICANTE', x='CONTEO', color='ESTADO',
+                             orientation='h', title="Alertas por Lubricante",
                              color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b'},
                              text_auto=True)
             st.plotly_chart(fig_lub, use_container_width=True)
-        else:
-            st.warning("La columna 'LUBRICANTE' no se encuentra en el archivo.")
 
     with col_comp:
         if 'COMPONENTE' in df_fallas.columns:
-            # Contar fallas por componente y estado
             comp_data = df_fallas.groupby(['COMPONENTE', 'ESTADO']).size().reset_index(name='CONTEO')
             comp_data = comp_data.sort_values(by='CONTEO', ascending=True)
-            
-            fig_comp = px.bar(comp_data, 
-                              y='COMPONENTE', 
-                              x='CONTEO', 
-                              color='ESTADO',
-                              orientation='h',
-                              title="Alertas por Componente",
+            fig_comp = px.bar(comp_data, y='COMPONENTE', x='CONTEO', color='ESTADO',
+                              orientation='h', title="Alertas por Componente",
                               color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b'},
                               text_auto=True)
             st.plotly_chart(fig_comp, use_container_width=True)
-        else:
-            st.warning("La columna 'COMPONENTE' no se encuentra en el archivo.")
 
-    
-    # --- DISTRIBUCIÓN POR EQUIPO ---
+    # --- ESTADO POR EQUIPO ---
     if 'EQUIPO' in df_filtered.columns and not df_filtered.empty and 'ESTADO' in df_filtered.columns:
         st.markdown("---")
         st.subheader("🚜 Estado por Equipo")
@@ -322,7 +318,8 @@ if uploaded_file:
         for col in ['ALERTA', 'PRECAUCION', 'NORMAL']:
             if col not in e_data.columns: e_data[col] = 0
         fig_e = px.bar(e_data, y='EQUIPO', x=['ALERTA', 'PRECAUCION', 'NORMAL'], 
-                       orientation='h', color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'})
+                       orientation='h', color_discrete_map={'ALERTA':'#ef4444','PRECAUCION':'#f59e0b','NORMAL':'#10b981'},
+                       text_auto=True)
         st.plotly_chart(fig_e, use_container_width=True)
 
 else:
@@ -330,6 +327,6 @@ else:
     st.markdown("""
         ### Funcionalidades Disponibles:
         * **Filtro de Faenas y Fechas:** Analice períodos específicos de operación.
-        * **Heatmap de Metales:** Identifique qué metal está desgastando sus activos.
-        * **Matriz de Decisiones:** Priorice intervenciones técnicas de inmediato.
-    """)
+        * **Análisis de Contaminación y Desgaste:** Visualización avanzada de metales y contaminantes externos.
+        * **Matriz de Decisiones:** Priorice las intervenciones según los niveles de criticidad detectados.
+    """)    
