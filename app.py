@@ -23,8 +23,8 @@ if API_KEY:
 st.set_page_config(layout="wide", page_title="Panel-Service Engineer Analytics", page_icon="🚜")
 
 # RUTAS LOCALES (Debes subir estos archivos a la raíz de tu repositorio en GitHub)
-LOGO_COPEC_MOBIL = "logo_copec.png"
-LOGO_CSI = "logo_csi.png"
+LOGO_COPEC_MOBIL = "logo_copec.png..jpg"
+LOGO_CSI = "logo_csi.png..jpg"
 
 # --- 3. ESTILOS CSS PERSONALIZADOS ---
 st.markdown(f"""
