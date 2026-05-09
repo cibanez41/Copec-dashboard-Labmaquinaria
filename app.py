@@ -22,9 +22,9 @@ if API_KEY:
 # --- 2. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="Panel-Service Engineer Analytics", page_icon="🚜")
 
-# URLs de los logos (Se pueden cambiar por rutas locales en el repo)
-LOGO_COPEC_MOBIL = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Logo_Copec.svg/512px-Logo_Copec.svg.png"
-LOGO_CSI = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_CSI_logo.svg/1024px-Google_CSI_logo.svg.png" # Placeholder representativo
+# RUTAS LOCALES (Debes subir estos archivos a la raíz de tu repositorio en GitHub)
+LOGO_COPEC_MOBIL = "logo_copec.png"
+LOGO_CSI = "logo_csi.png"
 
 # --- 3. ESTILOS CSS PERSONALIZADOS ---
 st.markdown(f"""
@@ -78,10 +78,11 @@ def crear_gauge(valor, titulo, color):
     return fig
 
 # --- HEADER CON LOGOS ---
+# Nota: Streamlit maneja las rutas locales directamente si el archivo existe en el repo
 st.markdown(f"""
     <div class="header-logos">
-        <img src="{LOGO_COPEC_MOBIL}" width="150">
-        <img src="{LOGO_CSI}" width="100">
+        <img src="{LOGO_COPEC_MOBIL}" width="150" onerror="this.style.display='none'">
+        <img src="{LOGO_CSI}" width="100" onerror="this.style.display='none'">
     </div>
     """, unsafe_allow_html=True)
 
@@ -329,4 +330,5 @@ else:
         * **Filtro de Faenas y Fechas:** Analice períodos específicos de operación.
         * **Análisis de Contaminación y Desgaste:** Visualización avanzada de metales y contaminantes externos.
         * **Matriz de Decisiones:** Priorice las intervenciones según los niveles de criticidad detectados.
-    """)    
+    """)
+
