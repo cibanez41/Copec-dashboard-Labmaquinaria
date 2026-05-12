@@ -2,11 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 import google.generativeai as genai
 
 from datetime import datetime
-
 
 # =====================================================
 # CONFIGURACIÓN GENERAL
@@ -27,10 +25,17 @@ API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 model = None
 
 if API_KEY:
+
     try:
+
         genai.configure(api_key=API_KEY)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+
+        model = genai.GenerativeModel(
+            "gemini-1.5-flash"
+        )
+
     except Exception as e:
+
         st.warning(f"Gemini no disponible: {e}")
 
 # =====================================================
@@ -90,18 +95,26 @@ def load_data(file):
         df = pd.read_excel(file)
 
     else:
+
         st.error("Formato no soportado")
         st.stop()
 
-    df.columns = [c.upper().strip() for c in df.columns]
+    df.columns = [
+        c.upper().strip()
+        for c in df.columns
+    ]
 
     if "FECHA_MUESTREO" in df.columns:
+
         df.rename(
-            columns={"FECHA_MUESTREO": "FECHA_MUESTRA"},
+            columns={
+                "FECHA_MUESTREO": "FECHA_MUESTRA"
+            },
             inplace=True
         )
 
     if "FECHA_MUESTRA" in df.columns:
+
         df["FECHA_MUESTRA"] = pd.to_datetime(
             df["FECHA_MUESTRA"],
             errors="coerce"
@@ -112,39 +125,46 @@ def load_data(file):
 def generar_insight_ia(contexto):
 
     if model is None:
+
         return "IA no disponible"
 
     try:
 
         prompt = f"""
-        Actúa como ingeniero senior especialista en lubricación y confiabilidad.
+        Actúa como un ingeniero senior especialista en lubricación,
+        análisis de aceite y confiabilidad industrial.
 
         Analiza la siguiente información:
 
         {contexto}
 
         Entrega:
-        1. Diagnóstico técnico
-        2. Riesgo operacional
-        3. Posible causa raíz
-        4. Acción recomendada
+        - diagnóstico técnico
+        - riesgo operacional
+        - posible causa raíz
+        - recomendación de mantenimiento
 
-        Máximo 100 palabras.
+        Máximo 120 palabras.
         """
 
-        prompt = str(prompt)
-
-        response = model.generate_content(prompt)
+        response = model.generate_content(
+            str(prompt)
+        )
 
         return response.text
 
     except Exception as e:
+
         return f"Error IA: {e}"
 
 def normalizar(serie):
 
     if serie.max() == serie.min():
-        return pd.Series([0] * len(serie), index=serie.index)
+
+        return pd.Series(
+            [0] * len(serie),
+            index=serie.index
+        )
 
     return (
         (serie - serie.min()) /
@@ -179,11 +199,12 @@ if uploaded_file:
         df = load_data(uploaded_file)
 
         if df.empty:
+
             st.warning("Archivo sin datos")
             st.stop()
 
         # =====================================================
-        # COLUMNAS NECESARIAS
+        # COLUMNAS BASE
         # =====================================================
 
         columnas_base = [
@@ -198,10 +219,11 @@ if uploaded_file:
         for col in columnas_base:
 
             if col not in df.columns:
+
                 df[col] = 0
 
         # =====================================================
-        # FILTROS
+        # FILTRO FAENA
         # =====================================================
 
         if "NOMBRE_FAENA" in df.columns:
@@ -225,7 +247,7 @@ if uploaded_file:
                 ]
 
         # =====================================================
-        # FILTRO FECHAS
+        # FILTRO FECHA
         # =====================================================
 
         if (
@@ -271,6 +293,7 @@ if uploaded_file:
             )
 
         else:
+
             alertas = 0
             precaucion = 0
 
@@ -285,7 +308,7 @@ if uploaded_file:
         )
 
         # =====================================================
-        # INDICES
+        # ÍNDICES
         # =====================================================
 
         df["IDC"] = (
@@ -348,7 +371,10 @@ if uploaded_file:
 
             st.metric(
                 "⚠️ Riesgo Medio",
-                round(df["RIESGO_SCORE"].mean(), 1)
+                round(
+                    df["RIESGO_SCORE"].mean(),
+                    1
+                )
             )
 
         # =====================================================
@@ -425,7 +451,7 @@ if uploaded_file:
                 )
 
         # =====================================================
-        # TENDENCIA HIERRO
+        # TENDENCIA TEMPORAL
         # =====================================================
 
         if (
@@ -485,7 +511,11 @@ if uploaded_file:
                 y="SODIO",
                 size="HIERRO",
                 color="RIESGO_SCORE",
-                hover_name="EQUIPO" if "EQUIPO" in df.columns else None,
+                hover_name=(
+                    "EQUIPO"
+                    if "EQUIPO" in df.columns
+                    else None
+                ),
                 title="Silicio vs Sodio"
             )
 
@@ -504,7 +534,9 @@ if uploaded_file:
                                 "SODIO",
                                 "HIERRO"
                             ]
-                        ].describe().to_string()
+                        ]
+                        .describe()
+                        .to_string()
                     )
                 )
 
@@ -552,91 +584,85 @@ if uploaded_file:
             )
 
         # =====================================================
-# DETECCIÓN SIMPLE DE ANOMALÍAS
-# =====================================================
+        # DETECCIÓN ESTADÍSTICA DE ANOMALÍAS
+        # =====================================================
 
-st.markdown("---")
+        st.markdown("---")
 
-st.subheader(
-    "🤖 Detección Inteligente de Anomalías"
-)
-
-try:
-
-    variables = [
-        "HIERRO",
-        "COBRE",
-        "SILICIO",
-        "IDC"
-    ]
-
-    variables = [
-        v for v in variables
-        if v in df.columns
-    ]
-
-    if len(variables) > 0:
-
-        df["ANOMALIA_SCORE"] = 0
-
-        for var in variables:
-
-            media = df[var].mean()
-            std = df[var].std()
-
-            if std > 0:
-
-                zscore = (
-                    (df[var] - media) / std
-                ).abs()
-
-                df["ANOMALIA_SCORE"] += zscore
-
-        anom = df[
-            df["ANOMALIA_SCORE"] > 8
-        ]
-
-        st.write(
-            f"Se detectaron {len(anom)} anomalías potenciales"
+        st.subheader(
+            "🤖 Detección Inteligente de Anomalías"
         )
 
-        if len(anom) > 0:
+        try:
 
-            cols_show = [
-                c for c in [
-                    "EQUIPO",
-                    "HIERRO",
-                    "COBRE",
-                    "SILICIO",
-                    "RIESGO_SCORE",
-                    "ANOMALIA_SCORE"
-                ]
-                if c in anom.columns
+            variables = [
+                "HIERRO",
+                "COBRE",
+                "SILICIO",
+                "IDC"
             ]
 
-            st.dataframe(
-                anom[cols_show]
-                .sort_values(
-                    by="ANOMALIA_SCORE",
-                    ascending=False
-                ),
-                use_container_width=True
+            variables = [
+                v for v in variables
+                if v in df.columns
+            ]
+
+            if len(variables) > 0:
+
+                df["ANOMALIA_SCORE"] = 0
+
+                for var in variables:
+
+                    media = df[var].mean()
+                    std = df[var].std()
+
+                    if std > 0:
+
+                        zscore = (
+                            (
+                                df[var] - media
+                            ) / std
+                        ).abs()
+
+                        df["ANOMALIA_SCORE"] += zscore
+
+                anom = df[
+                    df["ANOMALIA_SCORE"] > 8
+                ]
+
+                st.write(
+                    f"Se detectaron {len(anom)} anomalías potenciales"
+                )
+
+                if len(anom) > 0:
+
+                    cols_show = [
+                        c for c in [
+                            "EQUIPO",
+                            "HIERRO",
+                            "COBRE",
+                            "SILICIO",
+                            "RIESGO_SCORE",
+                            "ANOMALIA_SCORE"
+                        ]
+                        if c in anom.columns
+                    ]
+
+                    st.dataframe(
+                        anom[cols_show]
+                        .sort_values(
+                            by="ANOMALIA_SCORE",
+                            ascending=False
+                        ),
+                        use_container_width=True
+                    )
+
+        except Exception as e:
+
+            st.warning(
+                f"Error detección anomalías: {e}"
             )
 
-            st.markdown(
-                """
-                <div class='alert-box'>
-                Se identifican activos con comportamiento fuera de patrón estadístico normal.
-                Recomendable revisión inmediata y análisis causa raíz.
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-except Exception as e:
-
-    st.warning(f"Error detección anomalías: {e}")
-    
         # =====================================================
         # MATRIZ OPERACIONAL
         # =====================================================
@@ -705,8 +731,6 @@ else:
     st.info(
         "👋 Carga un archivo CSV o XLSX para comenzar"
     )
-
-
 
 
 
