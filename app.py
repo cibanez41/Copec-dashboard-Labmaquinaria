@@ -576,73 +576,11 @@ else:
     - Análisis causa raíz
     - Riesgo operacional
     """)
-```
 
----
-
-# requirements.txt
-
-```txt
-streamlit
-pandas
-numpy
-plotly
-google-generativeai
-scikit-learn
-```
-
----
-
-# secrets.toml
-
-```toml
 GEMINI_API_KEY = "TU_API_KEY"
-```
 
----
 
-# Estructura Recomendada
 
-```text
-project/
-│
-├── app.py
-├── requirements.txt
-├── .streamlit/
-│   └── secrets.toml
-│
-├── assets/
-│   ├── logo_copec.png
-│   └── logo_csi.png
-│
-└── data/
-```
 
----
 
-# Deploy Streamlit Cloud
 
-1. Subir repo a GitHub
-2. Entrar a Streamlit Cloud
-3. New App
-4. Conectar repo
-5. Deploy
-6. Agregar Secrets:
-
-```toml
-GEMINI_API_KEY="TU_API_KEY"
-```
-
----
-
-# Próxima Evolución Recomendada
-
-## Fase 2
-
-* Predicción fallas
-* Forecast desgaste
-* Reporte PDF automático
-* Chat IA técnico
-* Integración SAP
-* Alertas WhatsApp
-* Mantenimiento predictivo ML
