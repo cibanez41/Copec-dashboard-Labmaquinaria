@@ -1,6 +1,5 @@
 # app.py — Dashboard Inteligente de Mantenimiento con IA
 
-```python
 import streamlit as st
 import pandas as pd
 import numpy as np
