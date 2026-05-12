@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import google.generativeai as genai
 
 from datetime import datetime
-from sklearn.ensemble import IsolationForest
+
 
 # =====================================================
 # CONFIGURACIÓN GENERAL
@@ -552,32 +552,49 @@ if uploaded_file:
             )
 
         # =====================================================
-        # ANOMALÍAS IA
-        # =====================================================
+# DETECCIÓN SIMPLE DE ANOMALÍAS
+# =====================================================
 
-        st.markdown("---")
+st.markdown("---")
 
-        st.subheader(
-            "🤖 Detección Inteligente de Anomalías"
-        )
+st.subheader(
+    "🤖 Detección Inteligente de Anomalías"
+)
 
-        cols_model = [
-            "HIERRO",
-            "COBRE",
-            "SILICIO",
-            "IDC"
+try:
+
+    variables = [
+        "HIERRO",
+        "COBRE",
+        "SILICIO",
+        "IDC"
+    ]
+
+    variables = [
+        v for v in variables
+        if v in df.columns
+    ]
+
+    if len(variables) > 0:
+
+        df["ANOMALIA_SCORE"] = 0
+
+        for var in variables:
+
+            media = df[var].mean()
+            std = df[var].std()
+
+            if std > 0:
+
+                zscore = (
+                    (df[var] - media) / std
+                ).abs()
+
+                df["ANOMALIA_SCORE"] += zscore
+
+        anom = df[
+            df["ANOMALIA_SCORE"] > 8
         ]
-
-        X = df[cols_model].fillna(0)
-
-        iso_model = IsolationForest(
-            contamination=0.05,
-            random_state=42
-        )
-
-        df["ANOMALIA"] = iso_model.fit_predict(X)
-
-        anom = df[df["ANOMALIA"] == -1]
 
         st.write(
             f"Se detectaron {len(anom)} anomalías potenciales"
@@ -591,16 +608,35 @@ if uploaded_file:
                     "HIERRO",
                     "COBRE",
                     "SILICIO",
-                    "RIESGO_SCORE"
+                    "RIESGO_SCORE",
+                    "ANOMALIA_SCORE"
                 ]
                 if c in anom.columns
             ]
 
             st.dataframe(
-                anom[cols_show],
+                anom[cols_show]
+                .sort_values(
+                    by="ANOMALIA_SCORE",
+                    ascending=False
+                ),
                 use_container_width=True
             )
 
+            st.markdown(
+                """
+                <div class='alert-box'>
+                Se identifican activos con comportamiento fuera de patrón estadístico normal.
+                Recomendable revisión inmediata y análisis causa raíz.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+except Exception as e:
+
+    st.warning(f"Error detección anomalías: {e}")
+    
         # =====================================================
         # MATRIZ OPERACIONAL
         # =====================================================
