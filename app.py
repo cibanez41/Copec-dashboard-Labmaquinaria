@@ -7,7 +7,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import google.generativeai as genai
 from datetime import datetime
-from sklearn.ensemble import IsolationForest
+from scikit-learn import IsolationForest
 
 # =====================================================
 # CONFIGURACIÓN GENERAL
