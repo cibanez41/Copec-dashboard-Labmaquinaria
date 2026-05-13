@@ -564,7 +564,7 @@ if uploaded_file:
                 use_container_width=True
             )
 
-        # =====================================================
+             # =====================================================
         # RESUMEN IA
         # =====================================================
 
@@ -576,13 +576,334 @@ if uploaded_file:
         Total muestras: {total}
         Alertas: {alertas}
         Precaución: {precaucion}
-        Riesgo promedio: {riesgo_medio}
+        Riesgo promedio: {round(df['RIESGO_SCORE'].mean(),1)}
         """
 
         st.markdown(
             f"""
             <div class='ia-box'>
             {generar_insight_ia(contexto_general)}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # =====================================================
+        # TOP EQUIPOS
+        # =====================================================
+
+        if "EQUIPO" in df.columns:
+
+            st.markdown("---")
+
+            st.subheader(
+                "🚨 Ranking Inteligente de Equipos"
+            )
+
+            top_eq = df.groupby("EQUIPO").agg({
+
+                "RIESGO_SCORE": "mean",
+                "HIERRO": "mean",
+                "SILICIO": "mean",
+                "IDC": "mean"
+
+            }).reset_index()
+
+            top_eq = top_eq.sort_values(
+                by="RIESGO_SCORE",
+                ascending=False
+            ).head(15)
+
+            fig_top = px.bar(
+                top_eq,
+                x="RIESGO_SCORE",
+                y="EQUIPO",
+                orientation="h",
+                color="RIESGO_SCORE",
+                text_auto=".1f",
+                title="Top Equipos Críticos"
+            )
+
+            st.plotly_chart(
+                fig_top,
+                use_container_width=True
+            )
+
+            with st.expander("🧠 Insight IA"):
+
+                st.write(
+                    generar_insight_ia(
+                        top_eq.to_string()
+                    )
+                )
+
+        # =====================================================
+        # TENDENCIA TEMPORAL
+        # =====================================================
+
+        if (
+            "FECHA_MUESTRA" in df.columns and
+            "HIERRO" in df.columns
+        ):
+
+            st.markdown("---")
+
+            st.subheader(
+                "📈 Tendencia Temporal de Desgaste"
+            )
+
+            trend = df.groupby(
+                "FECHA_MUESTRA"
+            )["HIERRO"].mean().reset_index()
+
+            fig_line = px.line(
+                trend,
+                x="FECHA_MUESTRA",
+                y="HIERRO",
+                markers=True,
+                title="Tendencia Hierro Promedio"
+            )
+
+            st.plotly_chart(
+                fig_line,
+                use_container_width=True
+            )
+
+            with st.expander("🧠 Insight IA"):
+
+                st.write(
+                    generar_insight_ia(
+                        trend.tail(10).to_string()
+                    )
+                )
+
+        # =====================================================
+        # CONTAMINACIÓN
+        # =====================================================
+
+        if (
+            "SILICIO" in df.columns and
+            "SODIO" in df.columns
+        ):
+
+            st.markdown("---")
+
+            st.subheader(
+                "⚠️ Análisis de Contaminación"
+            )
+
+            fig_cont = px.scatter(
+                df,
+                x="SILICIO",
+                y="SODIO",
+                size="HIERRO",
+                color="RIESGO_SCORE",
+                hover_name=(
+                    "EQUIPO"
+                    if "EQUIPO" in df.columns
+                    else None
+                ),
+                title="Silicio vs Sodio"
+            )
+
+            st.plotly_chart(
+                fig_cont,
+                use_container_width=True
+            )
+
+            with st.expander("🧠 Insight IA"):
+
+                st.write(
+                    generar_insight_ia(
+                        df[
+                            [
+                                "SILICIO",
+                                "SODIO",
+                                "HIERRO"
+                            ]
+                        ]
+                        .describe()
+                        .to_string()
+                    )
+                )
+
+        # =====================================================
+        # HEATMAP
+        # =====================================================
+
+        metales = [
+            "HIERRO",
+            "COBRE",
+            "PLOMO",
+            "ALUMINIO"
+        ]
+
+        metales_ok = [
+            m for m in metales
+            if m in df.columns
+        ]
+
+        if (
+            "EQUIPO" in df.columns and
+            len(metales_ok) > 0
+        ):
+
+            st.markdown("---")
+
+            st.subheader(
+                "🔥 Heatmap de Desgaste"
+            )
+
+            heat = df.groupby(
+                "EQUIPO"
+            )[metales_ok].mean().head(20)
+
+            fig_heat = px.imshow(
+                heat,
+                text_auto=True,
+                aspect="auto",
+                color_continuous_scale="Reds"
+            )
+
+            st.plotly_chart(
+                fig_heat,
+                use_container_width=True
+            )
+
+        # =====================================================
+        # DETECCIÓN ESTADÍSTICA DE ANOMALÍAS
+        # =====================================================
+
+        st.markdown("---")
+
+        st.subheader(
+            "🤖 Detección Inteligente de Anomalías"
+        )
+
+        try:
+
+            variables = [
+                "HIERRO",
+                "COBRE",
+                "SILICIO",
+                "IDC"
+            ]
+
+            variables = [
+                v for v in variables
+                if v in df.columns
+            ]
+
+            if len(variables) > 0:
+
+                df["ANOMALIA_SCORE"] = 0
+
+                for var in variables:
+
+                    media = df[var].mean()
+                    std = df[var].std()
+
+                    if std > 0:
+
+                        zscore = (
+                            (
+                                df[var] - media
+                            ) / std
+                        ).abs()
+
+                        df["ANOMALIA_SCORE"] += zscore
+
+                anom = df[
+                    df["ANOMALIA_SCORE"] > 8
+                ]
+
+                st.write(
+                    f"Se detectaron {len(anom)} anomalías potenciales"
+                )
+
+                if len(anom) > 0:
+
+                    cols_show = [
+                        c for c in [
+                            "EQUIPO",
+                            "HIERRO",
+                            "COBRE",
+                            "SILICIO",
+                            "RIESGO_SCORE",
+                            "ANOMALIA_SCORE"
+                        ]
+                        if c in anom.columns
+                    ]
+
+                    st.dataframe(
+                        anom[cols_show]
+                        .sort_values(
+                            by="ANOMALIA_SCORE",
+                            ascending=False
+                        ),
+                        use_container_width=True
+                    )
+
+        except Exception as e:
+
+            st.warning(
+                f"Error detección anomalías: {e}"
+            )
+
+        # =====================================================
+        # MATRIZ OPERACIONAL
+        # =====================================================
+
+        st.markdown("---")
+
+        st.subheader(
+            "📋 Matriz Operacional Inteligente"
+        )
+
+        cols_show = [
+            "EQUIPO",
+            "COMPONENTE",
+            "ESTADO",
+            "HIERRO",
+            "SILICIO",
+            "IDC",
+            "RIESGO_SCORE"
+        ]
+
+        cols_show = [
+            c for c in cols_show
+            if c in df.columns
+        ]
+
+        tabla = df[cols_show].sort_values(
+            by="RIESGO_SCORE",
+            ascending=False
+        )
+
+        st.dataframe(
+            tabla,
+            use_container_width=True,
+            hide_index=True
+        )
+
+        # =====================================================
+        # RECOMENDACIONES IA
+        # =====================================================
+
+        st.markdown("---")
+
+        st.subheader(
+            "🧠 Recomendaciones Inteligentes"
+        )
+
+        recomendaciones = generar_insight_ia(
+            tabla.head(20).to_string()
+        )
+
+        st.markdown(
+            f"""
+            <div class='alert-box'>
+            {recomendaciones}
             </div>
             """,
             unsafe_allow_html=True
