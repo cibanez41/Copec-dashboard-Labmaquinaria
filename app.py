@@ -36,15 +36,7 @@ if API_KEY:
 
     except Exception as e:
 
-        st.warning(
-            f"Gemini no disponible: {e}"
-        )
-
-else:
-
-    st.warning(
-        "No se encontró GEMINI_API_KEY"
-    )
+        st.warning(f"Gemini no disponible: {e}")
 
 # =====================================================
 # CSS
@@ -130,29 +122,35 @@ def load_data(file):
 
     return df
 
+@st.cache_data(ttl=3600)
 def generar_insight_ia(contexto):
 
     if model is None:
 
-        return "IA no disponible"
+        return """
+        IA temporalmente no disponible.
+        """
 
     try:
 
         prompt = f"""
-        Actúa como un ingeniero senior especialista en lubricación,
-        análisis de aceite y confiabilidad industrial.
+        Actúa como ingeniero senior especialista en:
+        - lubricación industrial
+        - análisis de aceite
+        - mantenimiento predictivo
+        - confiabilidad minera
 
-        Analiza la siguiente información:
+        Analiza:
 
         {contexto}
 
         Entrega:
         - diagnóstico técnico
-        - riesgo operacional
+        - criticidad
         - posible causa raíz
-        - recomendación de mantenimiento
+        - acción recomendada
 
-        Máximo 120 palabras.
+        Máximo 80 palabras.
         """
 
         response = model.generate_content(
@@ -163,7 +161,12 @@ def generar_insight_ia(contexto):
 
     except Exception as e:
 
-        return f"Error IA: {e}"
+        return f"""
+        IA no disponible actualmente.
+
+        Error:
+        {e}
+        """
 
 def normalizar(serie):
 
@@ -234,6 +237,8 @@ if uploaded_file:
         # FILTRO FAENA
         # =====================================================
 
+        faena_sel = "Todas"
+
         if "NOMBRE_FAENA" in df.columns:
 
             faenas = ["Todas"] + sorted(
@@ -284,270 +289,8 @@ if uploaded_file:
                     )
                 ]
 
-# =====================================================
-# KPIs MEJORADOS
-# =====================================================
-
-total = len(df)
-
-if "ESTADO" in df.columns:
-
-    alertas = len(
-        df[df["ESTADO"] == "ALERTA"]
-    )
-
-    precaucion = len(
-        df[df["ESTADO"] == "PRECAUCION"]
-    )
-
-    normales = len(
-        df[df["ESTADO"] == "NORMAL"]
-    )
-
-else:
-
-    alertas = 0
-    precaucion = 0
-    normales = 0
-
-criticidad = round(
-    (alertas / total) * 100,
-    1
-) if total > 0 else 0
-
-tasa_precaucion = round(
-    (precaucion / total) * 100,
-    1
-) if total > 0 else 0
-
-salud = round(
-    (normales / total) * 100,
-    1
-) if total > 0 else 0
-
-riesgo_medio = round(
-    df["RIESGO_SCORE"].mean(),
-    1
-) if "RIESGO_SCORE" in df.columns else 0
-
-# =====================================================
-# KPIs VISUALES
-# =====================================================
-
-st.markdown("---")
-
-st.subheader("📊 KPIs Operacionales")
-
-c1, c2, c3, c4 = st.columns(4)
-
-with c1:
-
-    st.metric(
-        "🚨 Criticidad",
-        f"{criticidad}%",
-        f"{alertas} alertas"
-    )
-
-    st.caption(
-        f"{alertas} ALERTAS de {total} muestras analizadas"
-    )
-
-with c2:
-
-    st.metric(
-        "🟡 Precaución",
-        f"{tasa_precaucion}%"
-    )
-
-    st.caption(
-        f"{precaucion} muestras en PRECAUCIÓN de {total}"
-    )
-
-with c3:
-
-    st.metric(
-        "🟢 Salud General",
-        f"{salud}%"
-    )
-
-    st.caption(
-        f"{normales} muestras NORMALES de {total}"
-    )
-
-with c4:
-
-    st.metric(
-        "⚠️ Riesgo Medio",
-        f"{riesgo_medio}%"
-    )
-
-    st.caption(
-        "Promedio índice riesgo operacional"
-    )
-
-# =====================================================
-# GRÁFICO SALUD POR FAENA
-# =====================================================
-
-if (
-    "NOMBRE_FAENA" in df.columns and
-    "ESTADO" in df.columns
-):
-
-    st.markdown("---")
-
-    st.subheader(
-        "🏭 Estado Operacional por Faena"
-    )
-
-    faena_data = (
-        df.groupby(
-            ["NOMBRE_FAENA", "ESTADO"]
-        )
-        .size()
-        .unstack(fill_value=0)
-        .reset_index()
-    )
-
-    for col in [
-        "ALERTA",
-        "PRECAUCION",
-        "NORMAL"
-    ]:
-
-        if col not in faena_data.columns:
-
-            faena_data[col] = 0
-
-    # =====================================================
-    # TODAS LAS FAENAS
-    # =====================================================
-
-    if (
-        "faena_sel" in locals() and
-        faena_sel == "Todas"
-    ):
-
-        faena_data["TOTAL"] = (
-
-            faena_data["ALERTA"] +
-
-            faena_data["PRECAUCION"] +
-
-            faena_data["NORMAL"]
-
-        )
-
-        faena_data = faena_data.sort_values(
-            by="TOTAL",
-            ascending=True
-        )
-
-        fig_faena = px.bar(
-
-            faena_data,
-
-            y="NOMBRE_FAENA",
-
-            x=[
-                "ALERTA",
-                "PRECAUCION",
-                "NORMAL"
-            ],
-
-            orientation="h",
-
-            text_auto=True,
-
-            title="Distribución de Estados por Faena",
-
-            color_discrete_map={
-                "ALERTA": "#ef4444",
-                "PRECAUCION": "#facc15",
-                "NORMAL": "#22c55e"
-            }
-
-        )
-
-        fig_faena.update_layout(
-
-            xaxis_title="Cantidad de muestras",
-
-            yaxis_title="Faena",
-
-            legend_title="Estado",
-
-            height=600
-
-        )
-
-    # =====================================================
-    # UNA SOLA FAENA
-    # =====================================================
-
-    else:
-
-        faena_single = faena_data[
-            faena_data["NOMBRE_FAENA"] == faena_sel
-        ]
-
-        faena_melt = faena_single.melt(
-
-            id_vars="NOMBRE_FAENA",
-
-            value_vars=[
-                "ALERTA",
-                "PRECAUCION",
-                "NORMAL"
-            ],
-
-            var_name="ESTADO",
-
-            value_name="TOTAL"
-
-        )
-
-        fig_faena = px.bar(
-
-            faena_melt,
-
-            x="ESTADO",
-
-            y="TOTAL",
-
-            color="ESTADO",
-
-            text_auto=True,
-
-            title=f"Estado Operacional - {faena_sel}",
-
-            color_discrete_map={
-                "ALERTA": "#ef4444",
-                "PRECAUCION": "#facc15",
-                "NORMAL": "#22c55e"
-            }
-
-        )
-
-        fig_faena.update_layout(
-
-            xaxis_title="Estado",
-
-            yaxis_title="Cantidad de muestras",
-
-            showlegend=False,
-
-            height=500
-
-        )
-
-    st.plotly_chart(
-        fig_faena,
-        use_container_width=True
-    )
-
         # =====================================================
-        # ÍNDICES
+        # SCORE RIESGO
         # =====================================================
 
         df["IDC"] = (
@@ -562,10 +305,6 @@ if (
             df["SODIO"]
         )
 
-        # =====================================================
-        # SCORE RIESGO
-        # =====================================================
-
         df["RIESGO_SCORE"] = (
 
             normalizar(df["HIERRO"]) * 0.35 +
@@ -579,8 +318,54 @@ if (
         ) * 100
 
         # =====================================================
-        # KPIs VISUALES
+        # KPIs MEJORADOS
         # =====================================================
+
+        total = len(df)
+
+        if "ESTADO" in df.columns:
+
+            alertas = len(
+                df[df["ESTADO"] == "ALERTA"]
+            )
+
+            precaucion = len(
+                df[df["ESTADO"] == "PRECAUCION"]
+            )
+
+            normales = len(
+                df[df["ESTADO"] == "NORMAL"]
+            )
+
+        else:
+
+            alertas = 0
+            precaucion = 0
+            normales = 0
+
+        criticidad = round(
+            (alertas / total) * 100,
+            1
+        ) if total > 0 else 0
+
+        tasa_precaucion = round(
+            (precaucion / total) * 100,
+            1
+        ) if total > 0 else 0
+
+        salud = round(
+            (normales / total) * 100,
+            1
+        ) if total > 0 else 0
+
+        riesgo_medio = round(
+            df["RIESGO_SCORE"].mean(),
+            1
+        ) if "RIESGO_SCORE" in df.columns else 0
+
+        st.markdown("---")
+
+        st.subheader("📊 KPIs Operacionales")
 
         c1, c2, c3, c4 = st.columns(4)
 
@@ -592,11 +377,19 @@ if (
                 f"{alertas} alertas"
             )
 
+            st.caption(
+                f"{alertas} ALERTAS de {total} muestras"
+            )
+
         with c2:
 
             st.metric(
                 "🟡 Precaución",
-                precaucion
+                f"{tasa_precaucion}%"
+            )
+
+            st.caption(
+                f"{precaucion} muestras en PRECAUCIÓN"
             )
 
         with c3:
@@ -606,14 +399,169 @@ if (
                 f"{salud}%"
             )
 
+            st.caption(
+                f"{normales} muestras NORMALES"
+            )
+
         with c4:
 
             st.metric(
                 "⚠️ Riesgo Medio",
-                round(
-                    df["RIESGO_SCORE"].mean(),
-                    1
+                f"{riesgo_medio}%"
+            )
+
+            st.caption(
+                "Promedio índice riesgo operacional"
+            )
+
+        # =====================================================
+        # GRÁFICO POR FAENA
+        # =====================================================
+
+        if (
+            "NOMBRE_FAENA" in df.columns and
+            "ESTADO" in df.columns
+        ):
+
+            st.markdown("---")
+
+            st.subheader(
+                "🏭 Estado Operacional por Faena"
+            )
+
+            faena_data = (
+                df.groupby(
+                    ["NOMBRE_FAENA", "ESTADO"]
                 )
+                .size()
+                .unstack(fill_value=0)
+                .reset_index()
+            )
+
+            for col in [
+                "ALERTA",
+                "PRECAUCION",
+                "NORMAL"
+            ]:
+
+                if col not in faena_data.columns:
+
+                    faena_data[col] = 0
+
+            if faena_sel == "Todas":
+
+                faena_data["TOTAL"] = (
+
+                    faena_data["ALERTA"] +
+
+                    faena_data["PRECAUCION"] +
+
+                    faena_data["NORMAL"]
+
+                )
+
+                faena_data = faena_data.sort_values(
+                    by="TOTAL",
+                    ascending=True
+                )
+
+                fig_faena = px.bar(
+
+                    faena_data,
+
+                    y="NOMBRE_FAENA",
+
+                    x=[
+                        "ALERTA",
+                        "PRECAUCION",
+                        "NORMAL"
+                    ],
+
+                    orientation="h",
+
+                    text_auto=True,
+
+                    title="Distribución de Estados por Faena",
+
+                    color_discrete_map={
+                        "ALERTA": "#ef4444",
+                        "PRECAUCION": "#facc15",
+                        "NORMAL": "#22c55e"
+                    }
+
+                )
+
+                fig_faena.update_layout(
+
+                    xaxis_title="Cantidad de muestras",
+
+                    yaxis_title="Faena",
+
+                    legend_title="Estado",
+
+                    height=600
+
+                )
+
+            else:
+
+                faena_single = faena_data[
+                    faena_data["NOMBRE_FAENA"] == faena_sel
+                ]
+
+                faena_melt = faena_single.melt(
+
+                    id_vars="NOMBRE_FAENA",
+
+                    value_vars=[
+                        "ALERTA",
+                        "PRECAUCION",
+                        "NORMAL"
+                    ],
+
+                    var_name="ESTADO",
+
+                    value_name="TOTAL"
+
+                )
+
+                fig_faena = px.bar(
+
+                    faena_melt,
+
+                    x="ESTADO",
+
+                    y="TOTAL",
+
+                    color="ESTADO",
+
+                    text_auto=True,
+
+                    title=f"Estado Operacional - {faena_sel}",
+
+                    color_discrete_map={
+                        "ALERTA": "#ef4444",
+                        "PRECAUCION": "#facc15",
+                        "NORMAL": "#22c55e"
+                    }
+
+                )
+
+                fig_faena.update_layout(
+
+                    xaxis_title="Estado",
+
+                    yaxis_title="Cantidad de muestras",
+
+                    showlegend=False,
+
+                    height=500
+
+                )
+
+            st.plotly_chart(
+                fig_faena,
+                use_container_width=True
             )
 
         # =====================================================
@@ -628,341 +576,13 @@ if (
         Total muestras: {total}
         Alertas: {alertas}
         Precaución: {precaucion}
-        Riesgo promedio: {round(df['RIESGO_SCORE'].mean(),1)}
+        Riesgo promedio: {riesgo_medio}
         """
 
         st.markdown(
             f"""
             <div class='ia-box'>
             {generar_insight_ia(contexto_general)}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        # =====================================================
-        # TOP EQUIPOS
-        # =====================================================
-
-        if "EQUIPO" in df.columns:
-
-            st.markdown("---")
-
-            st.subheader(
-                "🚨 Ranking Inteligente de Equipos"
-            )
-
-            top_eq = df.groupby("EQUIPO").agg({
-
-                "RIESGO_SCORE": "mean",
-                "HIERRO": "mean",
-                "SILICIO": "mean",
-                "IDC": "mean"
-
-            }).reset_index()
-
-            top_eq = top_eq.sort_values(
-                by="RIESGO_SCORE",
-                ascending=False
-            ).head(15)
-
-            fig_top = px.bar(
-                top_eq,
-                x="RIESGO_SCORE",
-                y="EQUIPO",
-                orientation="h",
-                color="RIESGO_SCORE",
-                text_auto=".1f",
-                title="Top Equipos Críticos"
-            )
-
-            st.plotly_chart(
-                fig_top,
-                use_container_width=True
-            )
-
-            with st.expander("🧠 Insight IA"):
-
-                st.write(
-                    generar_insight_ia(
-                        top_eq.to_string()
-                    )
-                )
-
-        # =====================================================
-        # TENDENCIA TEMPORAL
-        # =====================================================
-
-        if (
-            "FECHA_MUESTRA" in df.columns and
-            "HIERRO" in df.columns
-        ):
-
-            st.markdown("---")
-
-            st.subheader(
-                "📈 Tendencia Temporal de Desgaste"
-            )
-
-            trend = df.groupby(
-                "FECHA_MUESTRA"
-            )["HIERRO"].mean().reset_index()
-
-            fig_line = px.line(
-                trend,
-                x="FECHA_MUESTRA",
-                y="HIERRO",
-                markers=True,
-                title="Tendencia Hierro Promedio"
-            )
-
-            st.plotly_chart(
-                fig_line,
-                use_container_width=True
-            )
-
-            with st.expander("🧠 Insight IA"):
-
-                st.write(
-                    generar_insight_ia(
-                        trend.tail(10).to_string()
-                    )
-                )
-
-        # =====================================================
-        # CONTAMINACIÓN
-        # =====================================================
-
-        if (
-            "SILICIO" in df.columns and
-            "SODIO" in df.columns
-        ):
-
-            st.markdown("---")
-
-            st.subheader(
-                "⚠️ Análisis de Contaminación"
-            )
-
-            fig_cont = px.scatter(
-                df,
-                x="SILICIO",
-                y="SODIO",
-                size="HIERRO",
-                color="RIESGO_SCORE",
-                hover_name=(
-                    "EQUIPO"
-                    if "EQUIPO" in df.columns
-                    else None
-                ),
-                title="Silicio vs Sodio"
-            )
-
-            st.plotly_chart(
-                fig_cont,
-                use_container_width=True
-            )
-
-            with st.expander("🧠 Insight IA"):
-
-                st.write(
-                    generar_insight_ia(
-                        df[
-                            [
-                                "SILICIO",
-                                "SODIO",
-                                "HIERRO"
-                            ]
-                        ]
-                        .describe()
-                        .to_string()
-                    )
-                )
-
-        # =====================================================
-        # HEATMAP
-        # =====================================================
-
-        metales = [
-            "HIERRO",
-            "COBRE",
-            "PLOMO",
-            "CROMO",
-            "NIQUEL",
-            "ALUMINIO"
-        ]
-
-        metales_ok = [
-            m for m in metales
-            if m in df.columns
-        ]
-
-        if (
-            "EQUIPO" in df.columns and
-            len(metales_ok) > 0
-        ):
-
-            st.markdown("---")
-
-            st.subheader(
-                "🔥 Heatmap de Desgaste"
-            )
-
-            heat = df.groupby(
-                "EQUIPO"
-            )[metales_ok].mean().head(20)
-
-            fig_heat = px.imshow(
-                heat,
-                text_auto=True,
-                aspect="auto",
-                color_continuous_scale="Reds"
-            )
-
-            st.plotly_chart(
-                fig_heat,
-                use_container_width=True
-            )
-
-        # =====================================================
-        # DETECCIÓN ESTADÍSTICA DE ANOMALÍAS
-        # =====================================================
-
-        st.markdown("---")
-
-        st.subheader(
-            "🤖 Detección Inteligente de Anomalías 🚨"
-        )
-
-        try:
-
-            variables = [
-                "HIERRO",
-                "COBRE",
-                "SILICIO",
-                "IDC"
-            ]
-
-            variables = [
-                v for v in variables
-                if v in df.columns
-            ]
-
-            if len(variables) > 0:
-
-                df["ANOMALIA_SCORE"] = 0
-
-                for var in variables:
-
-                    media = df[var].mean()
-                    std = df[var].std()
-
-                    if std > 0:
-
-                        zscore = (
-                            (
-                                df[var] - media
-                            ) / std
-                        ).abs()
-
-                        df["ANOMALIA_SCORE"] += zscore
-
-                anom = df[
-                    df["ANOMALIA_SCORE"] > 8
-                ]
-
-                st.write(
-                    f"Se detectaron {len(anom)} anomalías potenciales"
-                )
-
-                if len(anom) > 0:
-
-                    cols_show = [
-                        c for c in [
-                            "EQUIPO",
-                            "COMPONENTE",
-                            "HIERRO",
-                            "PQ",
-                            "COBRE",
-                            "CROMO",
-                            "NIQUEL",
-                            "SILICIO",
-                            "LUBRICANTE",
-                            "RIESGO_SCORE",
-                            "ANOMALIA_SCORE"
-                        ]
-                        if c in anom.columns
-                    ]
-
-                    st.dataframe(
-                        anom[cols_show]
-                        .sort_values(
-                            by="ANOMALIA_SCORE",
-                            ascending=False
-                        ),
-                        use_container_width=True
-                    )
-
-        except Exception as e:
-
-            st.warning(
-                f"Error detección anomalías: {e}"
-            )
-
-        # =====================================================
-        # MATRIZ OPERACIONAL
-        # =====================================================
-
-        st.markdown("---")
-
-        st.subheader(
-            "📋 Matriz Operacional Inteligente"
-        )
-
-        cols_show = [
-            "EQUIPO",
-            "COMPONENTE",
-            "ESTADO",
-            "HIERRO",
-            "SILICIO",
-            "IDC",
-            "RIESGO_SCORE"
-        ]
-
-        cols_show = [
-            c for c in cols_show
-            if c in df.columns
-        ]
-
-        tabla = df[cols_show].sort_values(
-            by="RIESGO_SCORE",
-            ascending=False
-        )
-
-        st.dataframe(
-            tabla,
-            use_container_width=True,
-            hide_index=True
-        )
-
-        # =====================================================
-        # RECOMENDACIONES IA
-        # =====================================================
-
-        st.markdown("---")
-
-        st.subheader(
-            "🧠 Recomendaciones Inteligentes"
-        )
-
-        recomendaciones = generar_insight_ia(
-            tabla.head(20).to_string()
-        )
-
-        st.markdown(
-            f"""
-            <div class='alert-box'>
-            {recomendaciones}
             </div>
             """,
             unsafe_allow_html=True
@@ -977,7 +597,3 @@ else:
     st.info(
         "👋 Carga un archivo CSV o XLSX para comenzar"
     )
-
-
-
-
