@@ -600,7 +600,7 @@ if uploaded_file:
         st.markdown("---")
 
         st.subheader(
-            "🤖 Detección Inteligente de Anomalías"
+            "🤖 Detección Inteligente de Anomalías 🚨"
         )
 
         try:
