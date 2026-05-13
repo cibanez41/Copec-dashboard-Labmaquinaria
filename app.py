@@ -556,6 +556,8 @@ if uploaded_file:
             "HIERRO",
             "COBRE",
             "PLOMO",
+            "CROMO",
+            "NIQUEL",
             "ALUMINIO"
         ]
 
@@ -647,8 +649,12 @@ if uploaded_file:
                     cols_show = [
                         c for c in [
                             "EQUIPO",
+                            "COMPONENTE",
                             "HIERRO",
+                            "PQ",
                             "COBRE",
+                            "CROMO",
+                            "NIQUEL",
                             "SILICIO",
                             "RIESGO_SCORE",
                             "ANOMALIA_SCORE"
