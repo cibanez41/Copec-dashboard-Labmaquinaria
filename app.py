@@ -31,12 +31,20 @@ if API_KEY:
         genai.configure(api_key=API_KEY)
 
         model = genai.GenerativeModel(
-            "gemini-1.5-flash"
+            "gemini-2.0-flash"
         )
 
     except Exception as e:
 
-        st.warning(f"Gemini no disponible: {e}")
+        st.warning(
+            f"Gemini no disponible: {e}"
+        )
+
+else:
+
+    st.warning(
+        "No se encontró GEMINI_API_KEY"
+    )
 
 # =====================================================
 # CSS
