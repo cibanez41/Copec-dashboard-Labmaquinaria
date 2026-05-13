@@ -284,36 +284,267 @@ if uploaded_file:
                     )
                 ]
 
-        # =====================================================
-        # KPIs
-        # =====================================================
+# =====================================================
+# KPIs MEJORADOS
+# =====================================================
 
-        total = len(df)
+total = len(df)
 
-        if "ESTADO" in df.columns:
+if "ESTADO" in df.columns:
 
-            alertas = len(
-                df[df["ESTADO"] == "ALERTA"]
-            )
+    alertas = len(
+        df[df["ESTADO"] == "ALERTA"]
+    )
 
-            precaucion = len(
-                df[df["ESTADO"] == "PRECAUCION"]
-            )
+    precaucion = len(
+        df[df["ESTADO"] == "PRECAUCION"]
+    )
 
-        else:
+    normales = len(
+        df[df["ESTADO"] == "NORMAL"]
+    )
 
-            alertas = 0
-            precaucion = 0
+else:
 
-        criticidad = round(
-            (alertas / total) * 100,
-            1
-        ) if total > 0 else 0
+    alertas = 0
+    precaucion = 0
+    normales = 0
 
-        salud = round(
-            100 - criticidad,
-            1
+criticidad = round(
+    (alertas / total) * 100,
+    1
+) if total > 0 else 0
+
+tasa_precaucion = round(
+    (precaucion / total) * 100,
+    1
+) if total > 0 else 0
+
+salud = round(
+    (normales / total) * 100,
+    1
+) if total > 0 else 0
+
+riesgo_medio = round(
+    df["RIESGO_SCORE"].mean(),
+    1
+) if "RIESGO_SCORE" in df.columns else 0
+
+# =====================================================
+# KPIs VISUALES
+# =====================================================
+
+st.markdown("---")
+
+st.subheader("📊 KPIs Operacionales")
+
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+
+    st.metric(
+        "🚨 Criticidad",
+        f"{criticidad}%",
+        f"{alertas} alertas"
+    )
+
+    st.caption(
+        f"{alertas} ALERTAS de {total} muestras analizadas"
+    )
+
+with c2:
+
+    st.metric(
+        "🟡 Precaución",
+        f"{tasa_precaucion}%"
+    )
+
+    st.caption(
+        f"{precaucion} muestras en PRECAUCIÓN de {total}"
+    )
+
+with c3:
+
+    st.metric(
+        "🟢 Salud General",
+        f"{salud}%"
+    )
+
+    st.caption(
+        f"{normales} muestras NORMALES de {total}"
+    )
+
+with c4:
+
+    st.metric(
+        "⚠️ Riesgo Medio",
+        f"{riesgo_medio}%"
+    )
+
+    st.caption(
+        "Promedio índice riesgo operacional"
+    )
+
+# =====================================================
+# GRÁFICO SALUD POR FAENA
+# =====================================================
+
+if (
+    "NOMBRE_FAENA" in df.columns and
+    "ESTADO" in df.columns
+):
+
+    st.markdown("---")
+
+    st.subheader(
+        "🏭 Estado Operacional por Faena"
+    )
+
+    faena_data = (
+        df.groupby(
+            ["NOMBRE_FAENA", "ESTADO"]
         )
+        .size()
+        .unstack(fill_value=0)
+        .reset_index()
+    )
+
+    for col in [
+        "ALERTA",
+        "PRECAUCION",
+        "NORMAL"
+    ]:
+
+        if col not in faena_data.columns:
+
+            faena_data[col] = 0
+
+    # =====================================================
+    # TODAS LAS FAENAS
+    # =====================================================
+
+    if (
+        "faena_sel" in locals() and
+        faena_sel == "Todas"
+    ):
+
+        faena_data["TOTAL"] = (
+
+            faena_data["ALERTA"] +
+
+            faena_data["PRECAUCION"] +
+
+            faena_data["NORMAL"]
+
+        )
+
+        faena_data = faena_data.sort_values(
+            by="TOTAL",
+            ascending=True
+        )
+
+        fig_faena = px.bar(
+
+            faena_data,
+
+            y="NOMBRE_FAENA",
+
+            x=[
+                "ALERTA",
+                "PRECAUCION",
+                "NORMAL"
+            ],
+
+            orientation="h",
+
+            text_auto=True,
+
+            title="Distribución de Estados por Faena",
+
+            color_discrete_map={
+                "ALERTA": "#ef4444",
+                "PRECAUCION": "#facc15",
+                "NORMAL": "#22c55e"
+            }
+
+        )
+
+        fig_faena.update_layout(
+
+            xaxis_title="Cantidad de muestras",
+
+            yaxis_title="Faena",
+
+            legend_title="Estado",
+
+            height=600
+
+        )
+
+    # =====================================================
+    # UNA SOLA FAENA
+    # =====================================================
+
+    else:
+
+        faena_single = faena_data[
+            faena_data["NOMBRE_FAENA"] == faena_sel
+        ]
+
+        faena_melt = faena_single.melt(
+
+            id_vars="NOMBRE_FAENA",
+
+            value_vars=[
+                "ALERTA",
+                "PRECAUCION",
+                "NORMAL"
+            ],
+
+            var_name="ESTADO",
+
+            value_name="TOTAL"
+
+        )
+
+        fig_faena = px.bar(
+
+            faena_melt,
+
+            x="ESTADO",
+
+            y="TOTAL",
+
+            color="ESTADO",
+
+            text_auto=True,
+
+            title=f"Estado Operacional - {faena_sel}",
+
+            color_discrete_map={
+                "ALERTA": "#ef4444",
+                "PRECAUCION": "#facc15",
+                "NORMAL": "#22c55e"
+            }
+
+        )
+
+        fig_faena.update_layout(
+
+            xaxis_title="Estado",
+
+            yaxis_title="Cantidad de muestras",
+
+            showlegend=False,
+
+            height=500
+
+        )
+
+    st.plotly_chart(
+        fig_faena,
+        use_container_width=True
+    )
 
         # =====================================================
         # ÍNDICES
