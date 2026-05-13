@@ -656,6 +656,7 @@ if uploaded_file:
                             "CROMO",
                             "NIQUEL",
                             "SILICIO",
+                            "LUBRICANTE",
                             "RIESGO_SCORE",
                             "ANOMALIA_SCORE"
                         ]
